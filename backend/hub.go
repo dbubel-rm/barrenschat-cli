@@ -11,16 +11,14 @@ import (
 	"os"
 	"time"
 
+	"fmt"
 	b "github.com/engineerbeard/barrenschat/shared"
 	"strings"
-	"fmt"
 )
 
 const CERT_PEM = "cert.pem"
 const KEY_PEM = "key.pem"
 const HUB_ADDR = "localhost:8081"
-
-
 
 var connectedClients map[string][]BChatClient
 
@@ -38,7 +36,6 @@ func (c *BChatClient) ChangeName(s string) {
 func (c *BChatClient) ChangeRoom(s string) {
 	c.Room = s
 }
-
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -67,12 +64,19 @@ func FindClient(id string) (string, int, string) {
 	return room, idx, name
 }
 
-func GetNamesInRoom(room string) (string) {
+func GetNamesInRoom(room string) string {
 	var nameList string
 	for _, j := range connectedClients[room] {
 		nameList = fmt.Sprint(nameList, j.Name, "\n")
 	}
 	return nameList
+}
+func GetRoomsString() string {
+	var keys string
+	for k := range connectedClients {
+		keys = keys + k + "\n"
+}
+	return keys
 }
 
 func handleNewClient(c *websocket.Conn) {
@@ -81,35 +85,25 @@ func handleNewClient(c *websocket.Conn) {
 	var bMessage b.BMessage
 
 	c.ReadJSON(&bMessage)
-	//c.WriteJSON(b.BMessage{
-	//	MsgType: b.B_CONNECT,
-	//	Name: bMessage.Payload,
-	//	Room: b.MAIN_ROOM,
-	//	Payload: "Connected to Barrenschat ",
-	//	TimeStamp: time.Now(),
-	//	Data:GetNamesInRoom(b.MAIN_ROOM),
-	//	})
 	BClient := BChatClient{WsConn: c, Name: bMessage.Payload, Room: b.MAIN_ROOM, Uid: bMessage.Uid}
 	connectedClients[b.MAIN_ROOM] = append(connectedClients[b.MAIN_ROOM], BClient)
 	c.WriteJSON(b.BMessage{
-		MsgType:   b.B_CONNECT,
-		Name:      bMessage.Payload,
-		Room:      b.MAIN_ROOM,
-		Payload:   "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n /newroom <newroom>",
-		TimeStamp: time.Now(),
-		OnlineData:      GetNamesInRoom(b.MAIN_ROOM),
+		MsgType:    b.B_CONNECT,
+		Name:       bMessage.Payload,
+		Room:       b.MAIN_ROOM,
+		Payload:    "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n /newroom <newroom>",
+		TimeStamp:  time.Now(),
+		OnlineData: GetNamesInRoom(b.MAIN_ROOM),
 	})
 	id = bMessage.Uid
 	BroadcastMessage(b.MAIN_ROOM, b.BMessage{
-		MsgType:   b.B_CONNECT,
-		Name:      bMessage.Payload,
-		Room:      b.MAIN_ROOM,
-		Payload:   "New Connection!",
-		TimeStamp: time.Now(),
-		OnlineData:      GetNamesInRoom(b.MAIN_ROOM),
+		MsgType:    b.B_CONNECT,
+		Name:       bMessage.Payload,
+		Room:       b.MAIN_ROOM,
+		Payload:    "New Connection!",
+		TimeStamp:  time.Now(),
+		OnlineData: GetNamesInRoom(b.MAIN_ROOM),
 	})
-
-
 
 	for {
 		err := c.ReadJSON(&bMessage)
@@ -120,6 +114,9 @@ func handleNewClient(c *websocket.Conn) {
 			if bMessage.MsgType == b.B_NAMECHANGE {
 				connectedClients[room][idx].ChangeName(bMessage.Name)
 				bMessage.OnlineData = GetNamesInRoom(room)
+			} else if bMessage.MsgType == b.B_ROOMCHANGE {
+				connectedClients[room][idx].ChangeRoom(bMessage.Room)
+				bMessage.RoomData = GetRoomsString()
 			}
 			BroadcastMessage(room, bMessage)
 
@@ -128,11 +125,11 @@ func handleNewClient(c *websocket.Conn) {
 			room, idx, name := FindClient(id)
 			connectedClients[room] = append(connectedClients[room][:idx], connectedClients[room][idx+1:]...)
 			BroadcastMessage(room, b.BMessage{
-				MsgType:   b.B_DISCONNECT,
-				TimeStamp: time.Now(),
-				Payload:   name + " Disconnected",
-				OnlineData:      GetNamesInRoom(room),
-				})
+				MsgType:    b.B_DISCONNECT,
+				TimeStamp:  time.Now(),
+				Payload:    name + " Disconnected",
+				OnlineData: GetNamesInRoom(room),
+			})
 			log.Println(err) // Connection is over
 			break
 		}
@@ -147,7 +144,7 @@ func WsStart(upgrader websocket.Upgrader) httprouter.Handle {
 }
 
 func main() {
-	var upgrader = websocket.Upgrader{EnableCompression:true}
+	var upgrader = websocket.Upgrader{EnableCompression: true}
 	f, err := os.OpenFile("hub_log.txt", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatal(err)

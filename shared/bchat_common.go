@@ -5,6 +5,7 @@ import "time"
 const B_CONNECT = "B_CONNECT"
 const B_MESSAGE = "B_MESSAGE"
 const B_NAMECHANGE = "B_NAMECHANGE"
+const B_ROOMCHANGE = "B_ROOMCHANGE"
 const B_DISCONNECT = "B_DISCONNECT"
 const MAIN_ROOM = "MAIN_ROOM"
 
@@ -16,8 +17,7 @@ type BMessage struct {
 	TimeStamp  time.Time
 	Uid        string
 	OnlineData string
-	RoomData string
-
+	RoomData   string
 }
 
 //func GenCreds() (credentials.TransportCredentials){

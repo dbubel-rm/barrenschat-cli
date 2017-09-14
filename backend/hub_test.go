@@ -1,16 +1,17 @@
 package main
 
-
 import (
 	"math/rand"
-	"testing"
 	"net/http"
+	"testing"
 
 	"strings"
 )
+
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var rndUid, rndName, rndRoom string
 var names string
+
 func RandStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
@@ -23,13 +24,13 @@ func init() {
 	rndUid = RandStringRunes(32)
 	rndName = RandStringRunes(32)
 	rndRoom = RandStringRunes(32)
-	connectedClients["TEST"] = append(connectedClients["TEST"] ,BChatClient{Uid:rndUid, Name:rndName, Room:rndRoom})
+	connectedClients["TEST"] = append(connectedClients["TEST"], BChatClient{Uid: rndUid, Name: rndName, Room: rndRoom})
 	for j := 0; j < 2; j++ {
 		q := RandStringRunes(10)
 		connectedClients[q] = []BChatClient{}
 		for j := 0; j < 10; j++ {
 			n := RandStringRunes(10)
-			connectedClients[q] = append(connectedClients[q] ,BChatClient{Uid:RandStringRunes(32), Name:n, Room:RandStringRunes(10)})
+			connectedClients[q] = append(connectedClients[q], BChatClient{Uid: RandStringRunes(32), Name: n, Room: RandStringRunes(10)})
 		}
 	}
 }

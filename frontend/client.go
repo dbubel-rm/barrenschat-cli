@@ -2,34 +2,32 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"github.com/jroimartin/gocui"
+	"log"
 
 	"math/rand"
 	"time"
 	//"net/url"
 
-
 	"github.com/gorilla/websocket"
 
 	"crypto/tls"
-	"net/url"
 	b "github.com/engineerbeard/barrenschat/shared"
+	"net/url"
 	"strings"
-
 )
 
 type server struct{}
 
-
 type BChatClient struct {
-	Name string
-	Room string
+	Name   string
+	Room   string
 	WsConn *websocket.Conn
-	Uid string
+	Uid    string
 }
+
 func init() {
-    rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano())
 	BClient = BChatClient{}
 
 }
@@ -39,19 +37,21 @@ func (c *BChatClient) ChangeName(s string) {
 func (c *BChatClient) SendMessage(s b.BMessage) {
 	c.WsConn.WriteJSON(s)
 }
+
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var BClient BChatClient
+
 func RandStringRunes(n int) string {
-    a := make([]rune, n)
-    for i := range a {
-        a[i] = letterRunes[rand.Intn(len(letterRunes))]
-    }
-    return string(a)
+	a := make([]rune, n)
+	for i := range a {
+		a[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(a)
 }
 func main() {
 	// Setup Ws connection
 	u := url.URL{Scheme: "wss", Host: "localhost:8081", Path: "/bchatws"}
-	d := websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify:true}}
+	d := websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	c, _, err := d.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -60,8 +60,8 @@ func main() {
 	//c.WriteJSON()
 
 	//bhelpers.BMessage{MsgType:B_CONNECT, Uid:RandStringRunes(32)}
-	BClient = BChatClient{WsConn:c, Uid:RandStringRunes(32), Name:"Anon", Room:b.MAIN_ROOM}
-	BClient.SendMessage(b.BMessage{MsgType:b.B_CONNECT, Uid:RandStringRunes(32), Payload:BClient.Name})
+	BClient = BChatClient{WsConn: c, Uid: RandStringRunes(32), Name: "Anon", Room: b.MAIN_ROOM}
+	BClient.SendMessage(b.BMessage{MsgType: b.B_CONNECT, Uid: RandStringRunes(32), Payload: BClient.Name})
 
 	// Setup CUI
 	g, err := gocui.NewGui(gocui.OutputNormal)
@@ -81,7 +81,6 @@ func main() {
 	if err := g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone, onEnterEvt(c)); err != nil {
 		log.Panicln(err)
 	}
-
 
 	go handleConnection(c, g)
 
@@ -103,15 +102,15 @@ func handleConnection(c *websocket.Conn, g *gocui.Gui) {
 	}
 }
 
-func processMsg( msg b.BMessage, g *gocui.Gui) {
+func processMsg(msg b.BMessage, g *gocui.Gui) {
 	g.Update(func(g *gocui.Gui) error {
 		v, _ := g.View("chatwindow")
-		if msg.MsgType == b.B_CONNECT || msg.MsgType == b.B_NAMECHANGE || msg.MsgType == b.B_DISCONNECT{
+		if msg.MsgType == b.B_CONNECT || msg.MsgType == b.B_NAMECHANGE || msg.MsgType == b.B_DISCONNECT {
 			o, _ := g.View("online")
 			o.Clear()
 			fmt.Fprint(o, msg.OnlineData)
 		}
-		fmt.Fprintln(v,fmt.Sprintf("%s (%s) %s",msg.TimeStamp.Format("2006-01-02 15:04"),msg.Name, msg.Payload))
+		fmt.Fprintln(v, fmt.Sprintf("%s (%s) %s", msg.TimeStamp.Format("2006-01-02 15:04"), msg.Name, msg.Payload))
 		return nil
 	})
 }
@@ -124,27 +123,33 @@ func setActiveView(g *gocui.Gui, name string) (*gocui.View, error) {
 
 func onEnterEvt(c *websocket.Conn) func(g *gocui.Gui, v *gocui.View) error {
 	return func(g *gocui.Gui, v *gocui.View) error {
-		buf := strings.Replace(v.Buffer(), "\n","", -1)
+		buf := strings.Replace(v.Buffer(), "\n", "", -1)
 		if len(buf) < 1 {
 			v.SetCursor(0, 0)
 			return nil
 		}
 		msgType := b.B_MESSAGE
-		if strings.Contains(buf, "/name") && len(strings.SplitAfter(buf, "/name")) > 1{
+		if strings.Contains(buf, "/name") && len(strings.SplitAfter(buf, "/name")) > 1 {
 			newName := strings.SplitAfter(buf, "/name")[1]
 			newName = strings.TrimSpace(newName)
 			buf = fmt.Sprintf("%s changed name to %s", BClient.Name, newName)
 			BClient.Name = newName
 			msgType = b.B_NAMECHANGE
 
+		} else if strings.Contains(buf, "/room") && len(strings.SplitAfter(buf, "/room")) > 1 {
+			msgType = b.B_ROOMCHANGE
+			newRoom := strings.SplitAfter(buf, "/room")[1]
+			newRoom = strings.TrimSpace(newRoom)
+			BClient.Room = newRoom
+			buf = fmt.Sprintf("%s left room", BClient.Room)
 		}
 		err := c.WriteJSON(b.BMessage{
-			MsgType:msgType,
-			TimeStamp:time.Now(),
-			Name:BClient.Name,
-			Room:BClient.Room,
-			Uid:BClient.Uid,
-			Payload:buf,
+			MsgType:   msgType,
+			TimeStamp: time.Now(),
+			Name:      BClient.Name,
+			Room:      BClient.Room,
+			Uid:       BClient.Uid,
+			Payload:   buf,
 		})
 		if err != nil {
 			log.Println(err)
