@@ -109,7 +109,7 @@ func processMsg( msg b.BMessage, g *gocui.Gui) {
 		if msg.MsgType == b.B_CONNECT || msg.MsgType == b.B_NAMECHANGE || msg.MsgType == b.B_DISCONNECT{
 			o, _ := g.View("online")
 			o.Clear()
-			fmt.Fprint(o, msg.Data)
+			fmt.Fprint(o, msg.OnlineData)
 		}
 		fmt.Fprintln(v,fmt.Sprintf("%s (%s) %s",msg.TimeStamp.Format("2006-01-02 15:04"),msg.Name, msg.Payload))
 		return nil

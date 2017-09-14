@@ -9,13 +9,14 @@ const B_DISCONNECT = "B_DISCONNECT"
 const MAIN_ROOM = "MAIN_ROOM"
 
 type BMessage struct {
-	MsgType string
-	Name string
-	Room string
-	Payload string
-	TimeStamp time.Time
-	Uid string
-	Data string
+	MsgType    string
+	Name       string
+	Room       string
+	Payload    string
+	TimeStamp  time.Time
+	Uid        string
+	OnlineData string
+	RoomData string
 
 }
 

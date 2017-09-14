@@ -21,7 +21,7 @@ const KEY_PEM = "key.pem"
 const HUB_ADDR = "localhost:8081"
 
 
-var upgrader = websocket.Upgrader{EnableCompression:true} // use default options
+
 var connectedClients map[string][]BChatClient
 
 type BChatClient struct {
@@ -31,6 +31,15 @@ type BChatClient struct {
 	Uid    string
 }
 
+func (c *BChatClient) ChangeName(s string) {
+	c.Name = s
+}
+
+func (c *BChatClient) ChangeRoom(s string) {
+	c.Room = s
+}
+
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	connectedClients = make(map[string][]BChatClient)
@@ -38,7 +47,7 @@ func init() {
 }
 
 func BroadcastMessage(room string, s b.BMessage) {
-	log.Println("Broadcasting msg:", strings.Replace(fmt.Sprint(s), "\n", "", -1))
+	log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
 	for _, j := range connectedClients[room] {
 		go j.WsConn.WriteJSON(s)
 	}
@@ -88,7 +97,7 @@ func handleNewClient(c *websocket.Conn) {
 		Room:      b.MAIN_ROOM,
 		Payload:   "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n /newroom <newroom>",
 		TimeStamp: time.Now(),
-		Data:      GetNamesInRoom(b.MAIN_ROOM),
+		OnlineData:      GetNamesInRoom(b.MAIN_ROOM),
 	})
 	id = bMessage.Uid
 	BroadcastMessage(b.MAIN_ROOM, b.BMessage{
@@ -97,7 +106,7 @@ func handleNewClient(c *websocket.Conn) {
 		Room:      b.MAIN_ROOM,
 		Payload:   "New Connection!",
 		TimeStamp: time.Now(),
-		Data:      GetNamesInRoom(b.MAIN_ROOM),
+		OnlineData:      GetNamesInRoom(b.MAIN_ROOM),
 	})
 
 
@@ -109,8 +118,8 @@ func handleNewClient(c *websocket.Conn) {
 			room, idx, _ := FindClient(id)
 
 			if bMessage.MsgType == b.B_NAMECHANGE {
-				connectedClients[room][idx].Name = bMessage.Name
-				bMessage.Data = GetNamesInRoom(room)
+				connectedClients[room][idx].ChangeName(bMessage.Name)
+				bMessage.OnlineData = GetNamesInRoom(room)
 			}
 			BroadcastMessage(room, bMessage)
 
@@ -122,7 +131,7 @@ func handleNewClient(c *websocket.Conn) {
 				MsgType:   b.B_DISCONNECT,
 				TimeStamp: time.Now(),
 				Payload:   name + " Disconnected",
-				Data:      GetNamesInRoom(room),
+				OnlineData:      GetNamesInRoom(room),
 				})
 			log.Println(err) // Connection is over
 			break
@@ -130,7 +139,7 @@ func handleNewClient(c *websocket.Conn) {
 	}
 }
 
-func WsStart(s string) httprouter.Handle {
+func WsStart(upgrader websocket.Upgrader) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		c, _ := upgrader.Upgrade(w, r, nil)
 		go handleNewClient(c)
@@ -138,6 +147,7 @@ func WsStart(s string) httprouter.Handle {
 }
 
 func main() {
+	var upgrader = websocket.Upgrader{EnableCompression:true}
 	f, err := os.OpenFile("hub_log.txt", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatal(err)
@@ -153,7 +163,7 @@ func main() {
 	}
 
 	router := httprouter.New()
-	router.GET("/bchatws", WsStart("s"))
+	router.GET("/bchatws", WsStart(upgrader))
 	log.Println("Server started on:", HUB_ADDR)
 	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, router))
 
