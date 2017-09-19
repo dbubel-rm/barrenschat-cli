@@ -74,7 +74,6 @@ func TestGetNamesInRoomFail(t *testing.T) {
 	}
 }
 
-
 //func TestWsStart(t *testing.T) {
 //	var newBox bchatcommon.BMessage
 //

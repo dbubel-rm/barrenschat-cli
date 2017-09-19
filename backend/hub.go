@@ -75,7 +75,7 @@ func GetRoomsString() string {
 	var keys string
 	for k := range connectedClients {
 		keys = keys + k + "\n"
-}
+	}
 	return keys
 }
 
