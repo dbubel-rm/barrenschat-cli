@@ -44,8 +44,11 @@ func init() {
 }
 
 func BroadcastMessage(room string, s b.BMessage) {
+	//log.Println(room)
 	log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
 	for _, j := range connectedClients[room] {
+		//s.RoomData = GetRoomsString()
+		//s.OnlineData = GetNamesInRoom(room)
 		go j.WsConn.WriteJSON(s)
 	}
 }
@@ -91,9 +94,11 @@ func handleNewClient(c *websocket.Conn) {
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
 		Room:       b.MAIN_ROOM,
-		Payload:    "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n /newroom <newroom>",
+		Payload:    "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n",
 		TimeStamp:  time.Now(),
 		OnlineData: GetNamesInRoom(b.MAIN_ROOM),
+		RoomData: GetRoomsString(),
+
 	})
 	id = bMessage.Uid
 	BroadcastMessage(b.MAIN_ROOM, b.BMessage{
@@ -103,6 +108,8 @@ func handleNewClient(c *websocket.Conn) {
 		Payload:    "New Connection!",
 		TimeStamp:  time.Now(),
 		OnlineData: GetNamesInRoom(b.MAIN_ROOM),
+		RoomData: GetRoomsString(),
+
 	})
 
 	for {
@@ -110,16 +117,33 @@ func handleNewClient(c *websocket.Conn) {
 		if err == nil { // Process message
 
 			room, idx, _ := FindClient(id)
-
-			if bMessage.MsgType == b.B_NAMECHANGE {
+			bMessage.OnlineData = GetNamesInRoom(room)
+			if bMessage.MsgType == b.B_MESSAGE {
+				BroadcastMessage(room, bMessage)
+			} else if bMessage.MsgType == b.B_NAMECHANGE {
 				connectedClients[room][idx].ChangeName(bMessage.Name)
 				bMessage.OnlineData = GetNamesInRoom(room)
+				BroadcastMessage(room, bMessage)
 			} else if bMessage.MsgType == b.B_ROOMCHANGE {
 				connectedClients[room][idx].ChangeRoom(bMessage.Room)
-				bMessage.RoomData = GetRoomsString()
-			}
-			BroadcastMessage(room, bMessage)
 
+				if _, room_exists := connectedClients[bMessage.Room]; room_exists {
+					connectedClients[bMessage.Room] = append(connectedClients[bMessage.Room], connectedClients[room][idx])
+				} else {
+					connectedClients[bMessage.Room] = []BChatClient{connectedClients[room][idx]}
+				}
+
+				connectedClients[room] = append(connectedClients[room][:idx], connectedClients[room][idx+1:]...)
+
+				// Update clients
+				bMessage.RoomData = GetRoomsString()
+				bMessage.OnlineData = GetNamesInRoom(bMessage.Room)
+				bMessage.Payload = fmt.Sprint(bMessage.Name," joined the room.",  )
+				BroadcastMessage(bMessage.Room, bMessage) // Broadcast to new room
+				bMessage.Payload = fmt.Sprint(bMessage.Name, " left the room.")
+				bMessage.OnlineData = GetNamesInRoom(room)
+				BroadcastMessage(room, bMessage)
+			}
 		} else { // Clean up
 			BClient.WsConn.Close()
 			room, idx, name := FindClient(id)
@@ -129,6 +153,7 @@ func handleNewClient(c *websocket.Conn) {
 				TimeStamp:  time.Now(),
 				Payload:    name + " Disconnected",
 				OnlineData: GetNamesInRoom(room),
+				RoomData: GetRoomsString(),
 			})
 			log.Println(err) // Connection is over
 			break

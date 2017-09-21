@@ -17,6 +17,9 @@ import (
 	"strings"
 )
 
+const CHATWINDOW = "CHATWINDOW"
+const ONLINEWINDOW = "ONLINEWINDOW"
+const ROOMWINDOW = "ROOMWINDOW"
 type server struct{}
 
 type BChatClient struct {
@@ -87,7 +90,6 @@ func main() {
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
-
 }
 func handleConnection(c *websocket.Conn, g *gocui.Gui) {
 	var bMessage b.BMessage
@@ -104,16 +106,28 @@ func handleConnection(c *websocket.Conn, g *gocui.Gui) {
 
 func processMsg(msg b.BMessage, g *gocui.Gui) {
 	g.Update(func(g *gocui.Gui) error {
-		v, _ := g.View("chatwindow")
-		if msg.MsgType == b.B_CONNECT || msg.MsgType == b.B_NAMECHANGE || msg.MsgType == b.B_DISCONNECT {
-			o, _ := g.View("online")
+
+		v, _ := g.View(CHATWINDOW)
+		if msg.MsgType == b.B_CONNECT || msg.MsgType == b.B_DISCONNECT || msg.MsgType == b.B_ROOMCHANGE {
+			o, _ := g.View(ONLINEWINDOW)
+			o.Clear()
+			fmt.Fprint(o, msg.OnlineData)
+
+			o, _ = g.View(ROOMWINDOW)
+			o.Clear()
+			fmt.Fprintf(o, msg.RoomData)
+		}
+		if msg.MsgType == b.B_NAMECHANGE  {
+			o, _ := g.View(ONLINEWINDOW)
 			o.Clear()
 			fmt.Fprint(o, msg.OnlineData)
 		}
+
 		fmt.Fprintln(v, fmt.Sprintf("%s (%s) %s", msg.TimeStamp.Format("2006-01-02 15:04"), msg.Name, msg.Payload))
 		return nil
 	})
 }
+
 func setActiveView(g *gocui.Gui, name string) (*gocui.View, error) {
 	if _, err := g.SetCurrentView(name); err != nil {
 		return nil, err
@@ -141,7 +155,7 @@ func onEnterEvt(c *websocket.Conn) func(g *gocui.Gui, v *gocui.View) error {
 			newRoom := strings.SplitAfter(buf, "/room")[1]
 			newRoom = strings.TrimSpace(newRoom)
 			BClient.Room = newRoom
-			buf = fmt.Sprintf("%s left room", BClient.Room)
+			//buf = fmt.Sprintf("%s left room", BClient.Name)
 		}
 		err := c.WriteJSON(b.BMessage{
 			MsgType:   msgType,
@@ -163,7 +177,7 @@ func onEnterEvt(c *websocket.Conn) func(g *gocui.Gui, v *gocui.View) error {
 }
 func setLayout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	if v, err := g.SetView("online", 0, 0, 20, 14); err != nil {
+	if v, err := g.SetView(ONLINEWINDOW, 0, 0, 20, 14); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -171,7 +185,7 @@ func setLayout(g *gocui.Gui) error {
 		fmt.Fprintln(v, "")
 	}
 
-	if v, err := g.SetView("roomslist", 0, 15, 20, maxY-1); err != nil {
+	if v, err := g.SetView(ROOMWINDOW, 0, 15, 20, maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -190,7 +204,7 @@ func setLayout(g *gocui.Gui) error {
 		//fmt.Fprintf(v, "H")
 	}
 
-	if v, err := g.SetView("chatwindow", 21, 0, maxX-1, maxY-4); err != nil {
+	if v, err := g.SetView(CHATWINDOW, 21, 0, maxX-1, maxY-4); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
