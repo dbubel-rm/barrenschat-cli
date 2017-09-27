@@ -123,7 +123,7 @@ func processMsg(msg b.BMessage, g *gocui.Gui) {
 			fmt.Fprint(o, msg.OnlineData)
 		}
 
-		fmt.Fprintln(v, fmt.Sprintf("%s (%s) %s", msg.TimeStamp.Format("2006-01-02 15:04"), msg.Name, msg.Payload))
+		fmt.Fprintln(v, fmt.Sprintf("\u001b[33m%s\u001b[0m (%s) %s", msg.TimeStamp.Format("2006-01-02 15:04"), msg.Name, msg.Payload))
 		return nil
 	})
 }
@@ -182,6 +182,7 @@ func setLayout(g *gocui.Gui) error {
 			return err
 		}
 		v.Title = "Online"
+		v.Autoscroll = true
 		fmt.Fprintln(v, "")
 	}
 

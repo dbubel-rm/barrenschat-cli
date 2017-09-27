@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/engineerbeard/barrenschat/httpscerts"
 	"github.com/gorilla/websocket"
-	"github.com/julienschmidt/httprouter"
 	"io"
 	"log"
 	"math/rand"
@@ -14,6 +13,8 @@ import (
 	"fmt"
 	b "github.com/engineerbeard/barrenschat/shared"
 	"strings"
+	"sync"
+
 )
 
 const CERT_PEM = "cert.pem"
@@ -22,34 +23,59 @@ const HUB_ADDR = "localhost:8081"
 
 var connectedClients map[string][]BChatClient
 
+type ClientStruct struct {
+	Clients map[string][]BChatClient
+}
+
 type BChatClient struct {
 	Name   string
 	Room   string
 	WsConn *websocket.Conn
 	Uid    string
+	mu      sync.Mutex
 }
 
 func (c *BChatClient) ChangeName(s string) {
 	c.Name = s
 }
 
+func (c *BChatClient) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.WsConn.Close()
+}
+
 func (c *BChatClient) ChangeRoom(s string) {
 	c.Room = s
 }
 
+func (c *BChatClient) SendMessage(s b.BMessage) {
+	c.mu.Lock()
+	c.WsConn.WriteJSON(s)
+	c.mu.Unlock()
+}
+
+func ( c *BChatClient) ReadMessage() (b.BMessage, error) {
+	c.mu.Lock()
+	var bMessage b.BMessage
+	err := c.WsConn.ReadJSON(&bMessage)
+	c.mu.Unlock()
+	return bMessage, err
+}
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	connectedClients = make(map[string][]BChatClient)
+	connectedClients = make(map	[string][]BChatClient)
 	connectedClients[b.MAIN_ROOM] = []BChatClient{}
 }
 
 func BroadcastMessage(room string, s b.BMessage) {
 	//log.Println(room)
-	log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
+	//log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
 	for _, j := range connectedClients[room] {
 		//s.RoomData = GetRoomsString()
 		//s.OnlineData = GetNamesInRoom(room)
-		go j.WsConn.WriteJSON(s)
+		j.SendMessage(s)
 	}
 }
 
@@ -85,12 +111,19 @@ func GetRoomsString() string {
 func handleNewClient(c *websocket.Conn) {
 	defer c.Close()
 	var id string
-	var bMessage b.BMessage
+	//var bMessage b.BMessage
 
-	c.ReadJSON(&bMessage)
-	BClient := BChatClient{WsConn: c, Name: bMessage.Payload, Room: b.MAIN_ROOM, Uid: bMessage.Uid}
+	//c.ReadJSON(&bMessage)
+	BClient := BChatClient{WsConn: c}
+	bMessage, _ := BClient.ReadMessage()
+	//Name: bMessage.Payload, Room: b.MAIN_ROOM, Uid: bMessage.Uid
+
+	BClient.Name = bMessage.Payload
+	BClient.Room = b.MAIN_ROOM
+	BClient.Uid = bMessage.Uid
+
 	connectedClients[b.MAIN_ROOM] = append(connectedClients[b.MAIN_ROOM], BClient)
-	c.WriteJSON(b.BMessage{
+	BClient.SendMessage(b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
 		Room:       b.MAIN_ROOM,
@@ -113,7 +146,8 @@ func handleNewClient(c *websocket.Conn) {
 	})
 
 	for {
-		err := c.ReadJSON(&bMessage)
+		//err := c.ReadJSON(&bMessage)
+		bMessage, err := BClient.ReadMessage()
 		if err == nil { // Process message
 
 			room, idx, _ := FindClient(id)
@@ -145,8 +179,9 @@ func handleNewClient(c *websocket.Conn) {
 				BroadcastMessage(room, bMessage)
 			}
 		} else { // Clean up
-			BClient.WsConn.Close()
+			BClient.Close()
 			room, idx, name := FindClient(id)
+			_=name
 			connectedClients[room] = append(connectedClients[room][:idx], connectedClients[room][idx+1:]...)
 			BroadcastMessage(room, b.BMessage{
 				MsgType:    b.B_DISCONNECT,
@@ -155,18 +190,20 @@ func handleNewClient(c *websocket.Conn) {
 				OnlineData: GetNamesInRoom(room),
 				RoomData: GetRoomsString(),
 			})
-			log.Println(err) // Connection is over
+			//log.Println(err) // Connection is over
 			break
 		}
 	}
 }
 
-func WsStart(upgrader websocket.Upgrader) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func WsStart(upgrader websocket.Upgrader) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		c, _ := upgrader.Upgrade(w, r, nil)
+		c.EnableWriteCompression(true)
 		go handleNewClient(c)
 	}
 }
+
 
 func main() {
 	var upgrader = websocket.Upgrader{EnableCompression: true}
@@ -184,9 +221,14 @@ func main() {
 		log.Fatal("Error: Couldn't create https certs.")
 	}
 
-	router := httprouter.New()
-	router.GET("/bchatws", WsStart(upgrader))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", WsStart(upgrader))
+	//http.ListenAndServe(":8000", mux)
+
+	//router := httprouter.New()
+	//router.GET("/bchatws", WsStart(upgrader))
 	log.Println("Server started on:", HUB_ADDR)
-	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, router))
+	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
 
 }
