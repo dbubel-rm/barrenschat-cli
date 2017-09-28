@@ -1,6 +1,10 @@
 package bchatcommon
 
-import "time"
+import (
+	"time"
+	"github.com/gorilla/websocket"
+	"sync"
+)
 
 const B_CONNECT = "B_CONNECT"
 const B_MESSAGE = "B_MESSAGE"
@@ -8,6 +12,42 @@ const B_NAMECHANGE = "B_NAMECHANGE"
 const B_ROOMCHANGE = "B_ROOMCHANGE"
 const B_DISCONNECT = "B_DISCONNECT"
 const MAIN_ROOM = "MAIN_ROOM"
+
+type BChatClient struct {
+	Name   string
+	Room   string
+	WsConn *websocket.Conn
+	Uid    string
+	mu     sync.Mutex
+}
+
+func (c *BChatClient) ChangeName(s string) {
+	c.Name = s
+}
+
+func (c *BChatClient) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.WsConn.Close()
+}
+
+func (c *BChatClient) ChangeRoom(s string) {
+	c.Room = s
+}
+
+func (c *BChatClient) SendMessage(s BMessage) {
+	c.mu.Lock()
+	c.WsConn.WriteJSON(s)
+	c.mu.Unlock()
+}
+
+func (c *BChatClient) ReadMessage() (BMessage, error) {
+	c.mu.Lock()
+	var bMessage BMessage
+	err := c.WsConn.ReadJSON(&bMessage)
+	c.mu.Unlock()
+	return bMessage, err
+}
 
 type BMessage struct {
 	MsgType    string
