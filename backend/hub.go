@@ -37,7 +37,6 @@ func (s *ServerStruct) ChangeClientRoom(room string, idx int, bMessage b.BMessag
 	s.Clients[room][idx].ChangeRoom(bMessage.Room)
 	s.mu.Lock()
 
-
 	if _, room_exists := s.Clients[bMessage.Room]; room_exists {
 		s.Clients[bMessage.Room] = append(s.Clients[bMessage.Room], s.Clients[room][idx])
 	} else {

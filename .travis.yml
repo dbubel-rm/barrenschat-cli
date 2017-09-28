@@ -16,7 +16,7 @@ install:
 - 
 script:
   - go get -t -v ./...
-  - go vet $(go list ./... | grep -v /vendor/)
+  - #go vet $(go list ./... | grep -v /vendor/)
   - go test -v -race ./... -bench=.
   - if [ "${LATEST}" = "true" ]; then gox -os="windows linux darwin" -arch="amd64" -verbose ./...; fi
 deploy:
