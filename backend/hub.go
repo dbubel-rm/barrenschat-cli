@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
 	"fmt"
 	b "github.com/engineerbeard/barrenschat/shared"
 	"strings"
@@ -78,8 +77,8 @@ func (s *ServerStruct) GetNamesInRoom(room string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var nameList string
-	for _, j := range s.Clients[room] {
-		nameList = fmt.Sprint(nameList, j.Name, "\n")
+	for i := range s.Clients[room] {
+		nameList = fmt.Sprint(nameList, s.Clients[room][i].Name, "\n")
 	}
 	return nameList
 }
@@ -101,15 +100,15 @@ func (s *ServerStruct) AddRoom(r string) {
 }
 func (s *ServerStruct) BroadcastMessage(r string, m b.BMessage) {
 	s.mu.Lock()
-	for _, j := range s.Clients[r] {
-		j.SendMessage(m)
+	for i := range s.Clients[r] {
+		s.Clients[r][i].SendMessage(m)
 	}
 	s.mu.Unlock()
 }
 
-func (s *ServerStruct) AddClient(c b.BChatClient) {
+func (s *ServerStruct) AddClient(c *b.BChatClient) {
 	s.mu.Lock()
-	s.Clients[b.MAIN_ROOM] = append(s.Clients[b.MAIN_ROOM], c)
+	s.Clients[b.MAIN_ROOM] = append(s.Clients[b.MAIN_ROOM], *c)
 	s.mu.Unlock()
 }
 
@@ -148,7 +147,7 @@ func handleNewClient(c *websocket.Conn) {
 	BClient.Room = b.MAIN_ROOM
 	BClient.Uid = bMessage.Uid
 
-	connectedClients.AddClient(BClient)
+	connectedClients.AddClient(&BClient)
 	BClient.SendMessage(b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
