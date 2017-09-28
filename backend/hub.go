@@ -14,76 +14,57 @@ import (
 	b "github.com/engineerbeard/barrenschat/shared"
 	"strings"
 	"sync"
-
 )
 
 const CERT_PEM = "cert.pem"
 const KEY_PEM = "key.pem"
 const HUB_ADDR = "localhost:8081"
 
-var connectedClients map[string][]BChatClient
+//var connectedClients map[string][]BChatClient
+var connectedClients ServerStruct
 
-type ClientStruct struct {
-	Clients map[string][]BChatClient
-}
-
-type BChatClient struct {
-	Name   string
-	Room   string
-	WsConn *websocket.Conn
-	Uid    string
+type ServerStruct struct {
+	Clients map[string][]b.BChatClient
 	mu      sync.Mutex
 }
 
-func (c *BChatClient) ChangeName(s string) {
-	c.Name = s
+func (s *ServerStruct) ChangeClientName(room string, index int, name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Clients[room][index].ChangeName(name)
 }
+func (s *ServerStruct) ChangeClientRoom(room string, idx int, bMessage b.BMessage) {
 
-func (c *BChatClient) Close() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.WsConn.Close()
-}
+	s.Clients[room][idx].ChangeRoom(bMessage.Room)
+	s.mu.Lock()
 
-func (c *BChatClient) ChangeRoom(s string) {
-	c.Room = s
-}
 
-func (c *BChatClient) SendMessage(s b.BMessage) {
-	c.mu.Lock()
-	c.WsConn.WriteJSON(s)
-	c.mu.Unlock()
-}
-
-func ( c *BChatClient) ReadMessage() (b.BMessage, error) {
-	c.mu.Lock()
-	var bMessage b.BMessage
-	err := c.WsConn.ReadJSON(&bMessage)
-	c.mu.Unlock()
-	return bMessage, err
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-	connectedClients = make(map	[string][]BChatClient)
-	connectedClients[b.MAIN_ROOM] = []BChatClient{}
-}
-
-func BroadcastMessage(room string, s b.BMessage) {
-	//log.Println(room)
-	//log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
-	for _, j := range connectedClients[room] {
-		//s.RoomData = GetRoomsString()
-		//s.OnlineData = GetNamesInRoom(room)
-		j.SendMessage(s)
+	if _, room_exists := s.Clients[bMessage.Room]; room_exists {
+		s.Clients[bMessage.Room] = append(s.Clients[bMessage.Room], s.Clients[room][idx])
+	} else {
+		s.Clients[bMessage.Room] = []b.BChatClient{s.Clients[room][idx]}
 	}
+
+	s.Clients[room] = append(s.Clients[room][:idx], s.Clients[room][idx+1:]...)
+	s.mu.Unlock()
+
+	// Update clients
+	bMessage.RoomData = s.GetRoomsString()
+	bMessage.OnlineData = s.GetNamesInRoom(bMessage.Room)
+	bMessage.Payload = fmt.Sprint(bMessage.Name, " joined the room.")
+	s.BroadcastMessage(bMessage.Room, bMessage) // Broadcast to new room
+	bMessage.Payload = fmt.Sprint(bMessage.Name, " left the room.")
+	bMessage.OnlineData = s.GetNamesInRoom(room)
+	s.BroadcastMessage(room, bMessage)
 }
 
-func FindClient(id string) (string, int, string) {
+func (s *ServerStruct) FindClient(id string) (string, int, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var room string
 	var name string
 	var idx int
-	for _, j := range connectedClients {
+	for _, j := range s.Clients {
 		for x := 0; x < len(j); x++ {
 			if strings.Contains(j[x].Uid, id) {
 				return j[x].Room, x, j[x].Name
@@ -93,20 +74,65 @@ func FindClient(id string) (string, int, string) {
 	return room, idx, name
 }
 
-func GetNamesInRoom(room string) string {
+func (s *ServerStruct) GetNamesInRoom(room string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var nameList string
-	for _, j := range connectedClients[room] {
+	for _, j := range s.Clients[room] {
 		nameList = fmt.Sprint(nameList, j.Name, "\n")
 	}
 	return nameList
 }
-func GetRoomsString() string {
+
+func (s *ServerStruct) GetRoomsString() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var keys string
-	for k := range connectedClients {
+	for k := range s.Clients {
 		keys = keys + k + "\n"
 	}
 	return keys
 }
+
+func (s *ServerStruct) AddRoom(r string) {
+	s.mu.Lock()
+	s.Clients[b.MAIN_ROOM] = []b.BChatClient{}
+	s.mu.Unlock()
+}
+func (s *ServerStruct) BroadcastMessage(r string, m b.BMessage) {
+	s.mu.Lock()
+	for _, j := range s.Clients[r] {
+		j.SendMessage(m)
+	}
+	s.mu.Unlock()
+}
+
+func (s *ServerStruct) AddClient(c b.BChatClient) {
+	s.mu.Lock()
+	s.Clients[b.MAIN_ROOM] = append(s.Clients[b.MAIN_ROOM], c)
+	s.mu.Unlock()
+}
+
+func (s *ServerStruct) RemoveClient(room string, idx int) {
+	s.mu.Lock()
+	s.Clients[room] = append(s.Clients[room][:idx], s.Clients[room][idx+1:]...)
+	s.mu.Unlock()
+
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	connectedClients.Clients = make(map[string][]b.BChatClient)
+	connectedClients.mu = sync.Mutex{}
+	connectedClients.AddRoom(b.MAIN_ROOM)
+	//
+}
+
+//func BroadcastMessage(room string, s b.BMessage) {
+//	//log.Println(room)
+//	//log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
+//
+//}
 
 func handleNewClient(c *websocket.Conn) {
 	defer c.Close()
@@ -114,7 +140,7 @@ func handleNewClient(c *websocket.Conn) {
 	//var bMessage b.BMessage
 
 	//c.ReadJSON(&bMessage)
-	BClient := BChatClient{WsConn: c}
+	BClient := b.BChatClient{WsConn: c}
 	bMessage, _ := BClient.ReadMessage()
 	//Name: bMessage.Payload, Room: b.MAIN_ROOM, Uid: bMessage.Uid
 
@@ -122,27 +148,25 @@ func handleNewClient(c *websocket.Conn) {
 	BClient.Room = b.MAIN_ROOM
 	BClient.Uid = bMessage.Uid
 
-	connectedClients[b.MAIN_ROOM] = append(connectedClients[b.MAIN_ROOM], BClient)
+	connectedClients.AddClient(BClient)
 	BClient.SendMessage(b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
 		Room:       b.MAIN_ROOM,
 		Payload:    "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n",
 		TimeStamp:  time.Now(),
-		OnlineData: GetNamesInRoom(b.MAIN_ROOM),
-		RoomData: GetRoomsString(),
-
+		OnlineData: connectedClients.GetNamesInRoom(b.MAIN_ROOM),
+		RoomData:   connectedClients.GetRoomsString(),
 	})
 	id = bMessage.Uid
-	BroadcastMessage(b.MAIN_ROOM, b.BMessage{
+	connectedClients.BroadcastMessage(b.MAIN_ROOM, b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
 		Room:       b.MAIN_ROOM,
 		Payload:    "New Connection!",
 		TimeStamp:  time.Now(),
-		OnlineData: GetNamesInRoom(b.MAIN_ROOM),
-		RoomData: GetRoomsString(),
-
+		OnlineData: connectedClients.GetNamesInRoom(b.MAIN_ROOM),
+		RoomData:   connectedClients.GetRoomsString(),
 	})
 
 	for {
@@ -150,45 +174,28 @@ func handleNewClient(c *websocket.Conn) {
 		bMessage, err := BClient.ReadMessage()
 		if err == nil { // Process message
 
-			room, idx, _ := FindClient(id)
-			bMessage.OnlineData = GetNamesInRoom(room)
+			room, idx, _ := connectedClients.FindClient(id)
+			bMessage.OnlineData = connectedClients.GetNamesInRoom(room)
 			if bMessage.MsgType == b.B_MESSAGE {
-				BroadcastMessage(room, bMessage)
+				connectedClients.BroadcastMessage(room, bMessage)
 			} else if bMessage.MsgType == b.B_NAMECHANGE {
-				connectedClients[room][idx].ChangeName(bMessage.Name)
-				bMessage.OnlineData = GetNamesInRoom(room)
-				BroadcastMessage(room, bMessage)
+				connectedClients.ChangeClientName(room, idx, bMessage.Name)
+				bMessage.OnlineData = connectedClients.GetNamesInRoom(room)
+				connectedClients.BroadcastMessage(room, bMessage)
 			} else if bMessage.MsgType == b.B_ROOMCHANGE {
-				connectedClients[room][idx].ChangeRoom(bMessage.Room)
+				connectedClients.ChangeClientRoom(room, idx,bMessage)
 
-				if _, room_exists := connectedClients[bMessage.Room]; room_exists {
-					connectedClients[bMessage.Room] = append(connectedClients[bMessage.Room], connectedClients[room][idx])
-				} else {
-					connectedClients[bMessage.Room] = []BChatClient{connectedClients[room][idx]}
-				}
-
-				connectedClients[room] = append(connectedClients[room][:idx], connectedClients[room][idx+1:]...)
-
-				// Update clients
-				bMessage.RoomData = GetRoomsString()
-				bMessage.OnlineData = GetNamesInRoom(bMessage.Room)
-				bMessage.Payload = fmt.Sprint(bMessage.Name," joined the room.",  )
-				BroadcastMessage(bMessage.Room, bMessage) // Broadcast to new room
-				bMessage.Payload = fmt.Sprint(bMessage.Name, " left the room.")
-				bMessage.OnlineData = GetNamesInRoom(room)
-				BroadcastMessage(room, bMessage)
 			}
 		} else { // Clean up
 			BClient.Close()
-			room, idx, name := FindClient(id)
-			_=name
-			connectedClients[room] = append(connectedClients[room][:idx], connectedClients[room][idx+1:]...)
-			BroadcastMessage(room, b.BMessage{
+			room, idx, name := connectedClients.FindClient(id)
+			connectedClients.RemoveClient(room, idx)
+			connectedClients.BroadcastMessage(room, b.BMessage{
 				MsgType:    b.B_DISCONNECT,
 				TimeStamp:  time.Now(),
 				Payload:    name + " Disconnected",
-				OnlineData: GetNamesInRoom(room),
-				RoomData: GetRoomsString(),
+				OnlineData: connectedClients.GetNamesInRoom(room),
+				RoomData:   connectedClients.GetRoomsString(),
 			})
 			//log.Println(err) // Connection is over
 			break
@@ -203,7 +210,6 @@ func WsStart(upgrader websocket.Upgrader) http.HandlerFunc {
 		go handleNewClient(c)
 	}
 }
-
 
 func main() {
 	var upgrader = websocket.Upgrader{EnableCompression: true}
@@ -220,7 +226,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: Couldn't create https certs.")
 	}
-
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", WsStart(upgrader))

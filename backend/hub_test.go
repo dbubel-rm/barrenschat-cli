@@ -14,8 +14,6 @@ import (
 	bs "github.com/engineerbeard/barrenschat/shared"
 	//"fmt"
 	"github.com/gorilla/websocket"
-
-
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -30,22 +28,22 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 func init() {
-	connectedClients = make(map[string][]BChatClient)
+	connectedClients.Clients = make(map[string][]bs.BChatClient)
 	rndUid = RandStringRunes(32)
 	rndName = RandStringRunes(32)
 	rndRoom = RandStringRunes(32)
-	connectedClients["TEST"] = append(connectedClients["TEST"], BChatClient{Uid: rndUid, Name: rndName, Room: rndRoom})
+	connectedClients.Clients["TEST"] = append(connectedClients.Clients["TEST"], bs.BChatClient{Uid: rndUid, Name: rndName, Room: rndRoom})
 	for j := 0; j < 15; j++ {
 		q := RandStringRunes(10)
-		connectedClients[q] = []BChatClient{}
+		connectedClients.Clients[q] = []bs.BChatClient{}
 		for j := 0; j < 10; j++ {
 			n := RandStringRunes(10)
-			connectedClients[q] = append(connectedClients[q], BChatClient{Uid: RandStringRunes(32), Name: n, Room: RandStringRunes(10)})
+			connectedClients.Clients[q] = append(connectedClients.Clients[q], bs.BChatClient{Uid: RandStringRunes(32), Name: n, Room: RandStringRunes(10)})
 		}
 	}
 }
 func TestFindClient(t *testing.T) {
-	room, _, name := FindClient(rndUid)
+	room, _, name := connectedClients.FindClient(rndUid)
 	if room != rndRoom {
 		t.Fatal("Incorrect Room")
 	}
@@ -55,7 +53,7 @@ func TestFindClient(t *testing.T) {
 }
 func BenchmarkFindClient(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		room, _, name := FindClient(rndUid)
+		room, _, name := connectedClients.FindClient(rndUid)
 		if room != rndRoom {
 			b.Fatal("Incorrect Room")
 		}
@@ -65,7 +63,7 @@ func BenchmarkFindClient(b *testing.B) {
 	}
 }
 func TestFindClientFail(t *testing.T) {
-	room, idx, name := FindClient(RandStringRunes(10))
+	room, idx, name := connectedClients.FindClient(RandStringRunes(10))
 	if room != "" {
 		t.Fatal("Incorrect Room")
 	}
@@ -78,7 +76,7 @@ func TestFindClientFail(t *testing.T) {
 }
 func BenchmarkFindClientFail(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		room, idx, name := FindClient("asdf")
+		room, idx, name := connectedClients.FindClient("asdf")
 		if room != "" {
 			b.Fatal("Incorrect Room")
 		}
@@ -91,14 +89,14 @@ func BenchmarkFindClientFail(b *testing.B) {
 	}
 }
 func TestGetNamesInRoom(t *testing.T) {
-	g := GetNamesInRoom("TEST")
+	g := connectedClients.GetNamesInRoom("TEST")
 	g = strings.Replace(g, "\n", "", -1)
 	if g != rndName {
 		t.Fatalf("Names do not match")
 	}
 }
 func TestGetNamesInRoomFail(t *testing.T) {
-	g := GetNamesInRoom("DNE")
+	g := connectedClients.GetNamesInRoom("DNE")
 	g = strings.Replace(g, "\n", "", -1)
 	if g == rndName {
 		t.Fatalf("Names do not match")
@@ -112,7 +110,7 @@ func TestWsStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	c.SendMessage(bs.BMessage{MsgType:bs.B_MESSAGE, Uid:uu, Payload:r})
+	c.SendMessage(bs.BMessage{MsgType: bs.B_MESSAGE, Uid: uu, Payload: r})
 	bMessage, err := c.ReadMessage()
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -133,7 +131,7 @@ func TestBroadcastMessageRoomChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	c.SendMessage(bs.BMessage{MsgType:bs.B_ROOMCHANGE, Uid:uu, Payload:r, Name:n, Room:rr})
+	c.SendMessage(bs.BMessage{MsgType: bs.B_ROOMCHANGE, Uid: uu, Payload: r, Name: n, Room: rr})
 	bMessage, err := c.ReadMessage()
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -159,7 +157,7 @@ func TestBroadcastMessageNameChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	c.SendMessage(bs.BMessage{MsgType:bs.B_NAMECHANGE, Uid:uu, Payload:r, Name:n})
+	c.SendMessage(bs.BMessage{MsgType: bs.B_NAMECHANGE, Uid: uu, Payload: r, Name: n})
 	bMessage, err := c.ReadMessage()
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -174,32 +172,32 @@ func TestBroadcastMessageNameChange(t *testing.T) {
 	//connectedClients = make(map[string][]BChatClient)
 }
 
-func TestConnect10Clients(t *testing.T) {
-	clientList := []BChatClient{}
-	for n := 0; n < 100; n++ {
-		f, err := getClient(bs.MAIN_ROOM)
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		clientList = append(clientList, f)
-		go func() {
-			for {
-				f.ReadMessage()
-			}
-		}()
-		//uu := RandStringRunes(32)
-		//r := RandStringRunes(32)
-		////c, err := getClient()
-		//if err != nil {
-		//	t.Fatalf(err.Error())
-		//}
-		//f.SendMessage(bs.BMessage{MsgType:bs.B_MESSAGE, Uid:uu, Payload:r})
-		//c.ReadMessage()
-	}
-	for _,clients := range clientList {
-		clients.Close()
-	}
-}
+//func TestConnect10Clients(t *testing.T) {
+//	clientList := []bs.BChatClient{}
+//	for n := 0; n < 10; n++ {
+//		f, err := getClient(bs.MAIN_ROOM)
+//		if err != nil {
+//			t.Fatalf(err.Error())
+//		}
+//		clientList = append(clientList, f)
+//		go func() {
+//			for {
+//				f.ReadMessage()
+//			}
+//		}()
+//		//uu := RandStringRunes(32)
+//		//r := RandStringRunes(32)
+//		////c, err := getClient()
+//		//if err != nil {
+//		//	t.Fatalf(err.Error())
+//		//}
+//		//f.SendMessage(bs.BMessage{MsgType:bs.B_MESSAGE, Uid:uu, Payload:r})
+//		//c.ReadMessage()
+//	}
+//	for _, clients := range clientList {
+//		clients.Close()
+//	}
+//}
 
 //func message(i int, b *testing.B) {
 //	var bMessage bs.BMessage
@@ -229,10 +227,10 @@ func TestConnect10Clients(t *testing.T) {
 //	message(10, b)
 //}
 
-func getClient(room string) (BChatClient, error) {
+func getClient(room string) (bs.BChatClient, error) {
 	var bMessage bs.BMessage
 	var upgrader = websocket.Upgrader{EnableCompression: true}
-	var BClient BChatClient
+	var BClient bs.BChatClient
 	srv := httptest.NewServer((WsStart(upgrader)))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
@@ -241,26 +239,23 @@ func getClient(room string) (BChatClient, error) {
 		return BClient, err
 	}
 	conn.EnableWriteCompression(true)
-	BClient = BChatClient{WsConn: conn, Uid: RandStringRunes(32), Name: RandStringRunes(10), Room: room}
+	BClient = bs.BChatClient{WsConn: conn, Uid: RandStringRunes(32), Name: RandStringRunes(10), Room: room}
 	if err != nil {
 		return BClient, err
 	}
 
 	BClient.SendMessage(bs.BMessage{MsgType: bs.B_CONNECT, Uid: RandStringRunes(32), Payload: BClient.Name})
-	bMessage , err = BClient.ReadMessage()
-
+	bMessage, err = BClient.ReadMessage()
 
 	if !strings.Contains(bMessage.Payload, "Welcome") {
 		return BClient, err
 	}
-	bMessage , err = BClient.ReadMessage()
+	bMessage, err = BClient.ReadMessage()
 	if !strings.Contains(bMessage.Payload, "Connection!") {
 		return BClient, err
 	}
 	return BClient, nil
 }
-
-
 
 func getRequestWithGET(t testing.TB, url string) *http.Request {
 	req, err := http.NewRequest("GET", url, nil)

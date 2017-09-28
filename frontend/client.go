@@ -20,29 +20,20 @@ import (
 const CHATWINDOW = "CHATWINDOW"
 const ONLINEWINDOW = "ONLINEWINDOW"
 const ROOMWINDOW = "ROOMWINDOW"
+
 type server struct{}
 
-type BChatClient struct {
-	Name   string
-	Room   string
-	WsConn *websocket.Conn
-	Uid    string
-}
+
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	BClient = BChatClient{}
+	BClient = b.BChatClient{}
 
 }
-func (c *BChatClient) ChangeName(s string) {
-	c.Name = s
-}
-func (c *BChatClient) SendMessage(s b.BMessage) {
-	c.WsConn.WriteJSON(s)
-}
+
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-var BClient BChatClient
+var BClient b.BChatClient
 
 func RandStringRunes(n int) string {
 	a := make([]rune, n)
@@ -62,8 +53,8 @@ func main() {
 
 	//c.WriteJSON()
 
-	//bhelpers.BMessage{MsgType:B_CONNECT, Uid:RandStringRunes(32)}
-	BClient = BChatClient{WsConn: c, Uid: RandStringRunes(32), Name: "Anon", Room: b.MAIN_ROOM}
+	//bhelpersb..BMessage{MsgType:B_CONNECT, Uid:RandStringRunes(32)}
+	BClient = b.BChatClient{WsConn: c, Uid: RandStringRunes(32), Name: "Anon", Room: b.MAIN_ROOM}
 	BClient.SendMessage(b.BMessage{MsgType: b.B_CONNECT, Uid: RandStringRunes(32), Payload: BClient.Name})
 
 	// Setup CUI
@@ -117,7 +108,7 @@ func processMsg(msg b.BMessage, g *gocui.Gui) {
 			o.Clear()
 			fmt.Fprintf(o, msg.RoomData)
 		}
-		if msg.MsgType == b.B_NAMECHANGE  {
+		if msg.MsgType == b.B_NAMECHANGE {
 			o, _ := g.View(ONLINEWINDOW)
 			o.Clear()
 			fmt.Fprint(o, msg.OnlineData)
