@@ -1,9 +1,9 @@
 package bchatcommon
 
 import (
-	"time"
 	"github.com/gorilla/websocket"
 	"sync"
+	"time"
 )
 
 const B_CONNECT = "B_CONNECT"

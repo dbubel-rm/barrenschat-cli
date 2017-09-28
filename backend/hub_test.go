@@ -14,6 +14,8 @@ import (
 	bs "github.com/engineerbeard/barrenschat/shared"
 	//"fmt"
 	"github.com/gorilla/websocket"
+	"log"
+	"io/ioutil"
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -28,22 +30,23 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 func init() {
-	connectedClients.Clients = make(map[string][]bs.BChatClient)
+	log.SetOutput(ioutil.Discard)
+	serverObj.Clients = make(map[string][]bs.BChatClient)
 	rndUid = RandStringRunes(32)
 	rndName = RandStringRunes(32)
 	rndRoom = RandStringRunes(32)
-	connectedClients.Clients["TEST"] = append(connectedClients.Clients["TEST"], bs.BChatClient{Uid: rndUid, Name: rndName, Room: rndRoom})
+	serverObj.Clients["TEST"] = append(serverObj.Clients["TEST"], bs.BChatClient{Uid: rndUid, Name: rndName, Room: rndRoom})
 	for j := 0; j < 15; j++ {
 		q := RandStringRunes(10)
-		connectedClients.Clients[q] = []bs.BChatClient{}
+		serverObj.Clients[q] = []bs.BChatClient{}
 		for j := 0; j < 10; j++ {
 			n := RandStringRunes(10)
-			connectedClients.Clients[q] = append(connectedClients.Clients[q], bs.BChatClient{Uid: RandStringRunes(32), Name: n, Room: RandStringRunes(10)})
+			serverObj.Clients[q] = append(serverObj.Clients[q], bs.BChatClient{Uid: RandStringRunes(32), Name: n, Room: RandStringRunes(10)})
 		}
 	}
 }
 func TestFindClient(t *testing.T) {
-	room, _, name := connectedClients.FindClient(rndUid)
+	room, _, name := serverObj.FindClient(rndUid)
 	if room != rndRoom {
 		t.Fatal("Incorrect Room")
 	}
@@ -53,7 +56,7 @@ func TestFindClient(t *testing.T) {
 }
 func BenchmarkFindClient(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		room, _, name := connectedClients.FindClient(rndUid)
+		room, _, name := serverObj.FindClient(rndUid)
 		if room != rndRoom {
 			b.Fatal("Incorrect Room")
 		}
@@ -63,7 +66,7 @@ func BenchmarkFindClient(b *testing.B) {
 	}
 }
 func TestFindClientFail(t *testing.T) {
-	room, idx, name := connectedClients.FindClient(RandStringRunes(10))
+	room, idx, name := serverObj.FindClient(RandStringRunes(10))
 	if room != "" {
 		t.Fatal("Incorrect Room")
 	}
@@ -76,7 +79,7 @@ func TestFindClientFail(t *testing.T) {
 }
 func BenchmarkFindClientFail(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		room, idx, name := connectedClients.FindClient("asdf")
+		room, idx, name := serverObj.FindClient("asdf")
 		if room != "" {
 			b.Fatal("Incorrect Room")
 		}
@@ -89,14 +92,14 @@ func BenchmarkFindClientFail(b *testing.B) {
 	}
 }
 func TestGetNamesInRoom(t *testing.T) {
-	g := connectedClients.GetNamesInRoom("TEST")
+	g := serverObj.GetNamesInRoom("TEST")
 	g = strings.Replace(g, "\n", "", -1)
 	if g != rndName {
 		t.Fatalf("Names do not match")
 	}
 }
 func TestGetNamesInRoomFail(t *testing.T) {
-	g := connectedClients.GetNamesInRoom("DNE")
+	g := serverObj.GetNamesInRoom("DNE")
 	g = strings.Replace(g, "\n", "", -1)
 	if g == rndName {
 		t.Fatalf("Names do not match")
@@ -169,7 +172,7 @@ func TestBroadcastMessageNameChange(t *testing.T) {
 		t.Fatalf("Name are not equal")
 	}
 	c.Close()
-	//connectedClients = make(map[string][]BChatClient)
+	//serverObj = make(map[string][]BChatClient)
 }
 
 //func TestConnect10Clients(t *testing.T) {

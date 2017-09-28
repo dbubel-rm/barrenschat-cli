@@ -23,14 +23,11 @@ const ROOMWINDOW = "ROOMWINDOW"
 
 type server struct{}
 
-
-
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	BClient = b.BChatClient{}
 
 }
-
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var BClient b.BChatClient

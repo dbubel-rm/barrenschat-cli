@@ -1,26 +1,58 @@
 package main
 
 import (
+	"fmt"
 	"github.com/engineerbeard/barrenschat/httpscerts"
+	b "github.com/engineerbeard/barrenschat/shared"
 	"github.com/gorilla/websocket"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
-	"time"
-	"fmt"
-	b "github.com/engineerbeard/barrenschat/shared"
 	"strings"
 	"sync"
+	"time"
 )
 
 const CERT_PEM = "cert.pem"
 const KEY_PEM = "key.pem"
 const HUB_ADDR = "localhost:8081"
 
-//var connectedClients map[string][]BChatClient
-var connectedClients ServerStruct
+var serverObj ServerStruct
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	serverObj.Clients = make(map[string][]b.BChatClient)
+	serverObj.mu = sync.Mutex{}
+	serverObj.AddRoom(b.MAIN_ROOM)
+}
+
+func main() {
+	var upgrader = websocket.Upgrader{EnableCompression: true}
+	f, err := os.OpenFile("hub_log.txt", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	mw := io.MultiWriter(os.Stdout)
+	log.SetOutput(mw)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	err = httpscerts.Generate(CERT_PEM, KEY_PEM, HUB_ADDR)
+	if err != nil {
+		log.Fatal("Error: Couldn't create https certs.")
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", WsStart(upgrader))
+	//http.ListenAndServe(":8000", mux)
+
+	//router := httprouter.New()
+	//router.GET("/bchatws", WsStart(upgrader))
+	log.Println("Server started on:", HUB_ADDR)
+	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
+}
 
 type ServerStruct struct {
 	Clients map[string][]b.BChatClient
@@ -32,25 +64,31 @@ func (s *ServerStruct) ChangeClientName(room string, index int, name string) {
 	defer s.mu.Unlock()
 	s.Clients[room][index].ChangeName(name)
 }
+
 func (s *ServerStruct) ChangeClientRoom(room string, idx int, bMessage b.BMessage) {
 
 	s.Clients[room][idx].ChangeRoom(bMessage.Room)
 	s.mu.Lock()
 
-	if _, room_exists := s.Clients[bMessage.Room]; room_exists {
+	// Move client to new room if the room exists
+	if _, roomExists := s.Clients[bMessage.Room]; roomExists {
 		s.Clients[bMessage.Room] = append(s.Clients[bMessage.Room], s.Clients[room][idx])
-	} else {
+	} else { // Make a new room and move the client to it
 		s.Clients[bMessage.Room] = []b.BChatClient{s.Clients[room][idx]}
 	}
 
+	//Remove client from original room
 	s.Clients[room] = append(s.Clients[room][:idx], s.Clients[room][idx+1:]...)
 	s.mu.Unlock()
 
 	// Update clients
+	// Broadcast to new room
 	bMessage.RoomData = s.GetRoomsString()
 	bMessage.OnlineData = s.GetNamesInRoom(bMessage.Room)
 	bMessage.Payload = fmt.Sprint(bMessage.Name, " joined the room.")
-	s.BroadcastMessage(bMessage.Room, bMessage) // Broadcast to new room
+
+	// Broadcast to old room
+	s.BroadcastMessage(bMessage.Room, bMessage)
 	bMessage.Payload = fmt.Sprint(bMessage.Name, " left the room.")
 	bMessage.OnlineData = s.GetNamesInRoom(room)
 	s.BroadcastMessage(room, bMessage)
@@ -87,7 +125,8 @@ func (s *ServerStruct) GetRoomsString() string {
 	defer s.mu.Unlock()
 	var keys string
 	for k := range s.Clients {
-		keys = keys + k + "\n"
+		keys = fmt.Sprint(keys, k, "\n")
+		//keys = keys + k + "\n"
 	}
 	return keys
 }
@@ -103,6 +142,7 @@ func (s *ServerStruct) BroadcastMessage(r string, m b.BMessage) {
 		s.Clients[r][i].SendMessage(m)
 	}
 	s.mu.Unlock()
+	log.Println(m)
 }
 
 func (s *ServerStruct) AddClient(c *b.BChatClient) {
@@ -118,84 +158,65 @@ func (s *ServerStruct) RemoveClient(room string, idx int) {
 
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-	connectedClients.Clients = make(map[string][]b.BChatClient)
-	connectedClients.mu = sync.Mutex{}
-	connectedClients.AddRoom(b.MAIN_ROOM)
-	//
-}
-
-//func BroadcastMessage(room string, s b.BMessage) {
-//	//log.Println(room)
-//	//log.Println(strings.Replace(fmt.Sprint(s), "\n", "", -1))
-//
-//}
-
 func handleNewClient(c *websocket.Conn) {
 	defer c.Close()
-	var id string
-	//var bMessage b.BMessage
+	var clientId string
 
-	//c.ReadJSON(&bMessage)
 	BClient := b.BChatClient{WsConn: c}
 	bMessage, _ := BClient.ReadMessage()
-	//Name: bMessage.Payload, Room: b.MAIN_ROOM, Uid: bMessage.Uid
-
 	BClient.Name = bMessage.Payload
 	BClient.Room = b.MAIN_ROOM
 	BClient.Uid = bMessage.Uid
 
-	connectedClients.AddClient(&BClient)
+	serverObj.AddClient(&BClient)
 	BClient.SendMessage(b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
 		Room:       b.MAIN_ROOM,
 		Payload:    "Welcome to BarrensChat\nCommands:\n /name <name>\n /room <room>\n",
 		TimeStamp:  time.Now(),
-		OnlineData: connectedClients.GetNamesInRoom(b.MAIN_ROOM),
-		RoomData:   connectedClients.GetRoomsString(),
+		OnlineData: serverObj.GetNamesInRoom(b.MAIN_ROOM),
+		RoomData:   serverObj.GetRoomsString(),
 	})
-	id = bMessage.Uid
-	connectedClients.BroadcastMessage(b.MAIN_ROOM, b.BMessage{
+
+	clientId = bMessage.Uid
+	serverObj.BroadcastMessage(b.MAIN_ROOM, b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
 		Room:       b.MAIN_ROOM,
 		Payload:    "New Connection!",
 		TimeStamp:  time.Now(),
-		OnlineData: connectedClients.GetNamesInRoom(b.MAIN_ROOM),
-		RoomData:   connectedClients.GetRoomsString(),
+		OnlineData: serverObj.GetNamesInRoom(b.MAIN_ROOM),
+		RoomData:   serverObj.GetRoomsString(),
 	})
 
 	for {
-		//err := c.ReadJSON(&bMessage)
 		bMessage, err := BClient.ReadMessage()
 		if err == nil { // Process message
 
-			room, idx, _ := connectedClients.FindClient(id)
-			bMessage.OnlineData = connectedClients.GetNamesInRoom(room)
+			room, idx, _ := serverObj.FindClient(clientId)
+			bMessage.OnlineData = serverObj.GetNamesInRoom(room)
 			if bMessage.MsgType == b.B_MESSAGE {
-				connectedClients.BroadcastMessage(room, bMessage)
+				serverObj.BroadcastMessage(room, bMessage)
 			} else if bMessage.MsgType == b.B_NAMECHANGE {
-				connectedClients.ChangeClientName(room, idx, bMessage.Name)
-				bMessage.OnlineData = connectedClients.GetNamesInRoom(room)
-				connectedClients.BroadcastMessage(room, bMessage)
+				serverObj.ChangeClientName(room, idx, bMessage.Name)
+				bMessage.OnlineData = serverObj.GetNamesInRoom(room)
+				serverObj.BroadcastMessage(room, bMessage)
 			} else if bMessage.MsgType == b.B_ROOMCHANGE {
-				connectedClients.ChangeClientRoom(room, idx,bMessage)
-
+				serverObj.ChangeClientRoom(room, idx, bMessage)
 			}
 		} else { // Clean up
 			BClient.Close()
-			room, idx, name := connectedClients.FindClient(id)
-			connectedClients.RemoveClient(room, idx)
-			connectedClients.BroadcastMessage(room, b.BMessage{
+			room, idx, name := serverObj.FindClient(clientId)
+			serverObj.RemoveClient(room, idx)
+			serverObj.BroadcastMessage(room, b.BMessage{
 				MsgType:    b.B_DISCONNECT,
 				TimeStamp:  time.Now(),
 				Payload:    name + " Disconnected",
-				OnlineData: connectedClients.GetNamesInRoom(room),
-				RoomData:   connectedClients.GetRoomsString(),
+				OnlineData: serverObj.GetNamesInRoom(room),
+				RoomData:   serverObj.GetRoomsString(),
 			})
-			//log.Println(err) // Connection is over
+			log.Println(err) // Connection is over
 			break
 		}
 	}
@@ -209,29 +230,3 @@ func WsStart(upgrader websocket.Upgrader) http.HandlerFunc {
 	}
 }
 
-func main() {
-	var upgrader = websocket.Upgrader{EnableCompression: true}
-	f, err := os.OpenFile("hub_log.txt", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	mw := io.MultiWriter(os.Stdout)
-	log.SetOutput(mw)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
-	err = httpscerts.Generate(CERT_PEM, KEY_PEM, HUB_ADDR)
-	if err != nil {
-		log.Fatal("Error: Couldn't create https certs.")
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", WsStart(upgrader))
-	//http.ListenAndServe(":8000", mux)
-
-	//router := httprouter.New()
-	//router.GET("/bchatws", WsStart(upgrader))
-	log.Println("Server started on:", HUB_ADDR)
-	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
-
-}
