@@ -52,6 +52,7 @@ func main() {
 	//router.GET("/bchatws", WsStart(upgrader))
 	log.Println("Server started on:", HUB_ADDR)
 	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
+	//log.Println(http.ListenAndServe(HUB_ADDR, mux))
 }
 
 type ServerStruct struct {
@@ -229,4 +230,3 @@ func WsStart(upgrader websocket.Upgrader) http.HandlerFunc {
 		go handleNewClient(c)
 	}
 }
-

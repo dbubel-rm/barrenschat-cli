@@ -14,8 +14,8 @@ import (
 	bs "github.com/engineerbeard/barrenschat/shared"
 	//"fmt"
 	"github.com/gorilla/websocket"
-	"log"
 	"io/ioutil"
+	"log"
 )
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

@@ -4,6 +4,24 @@ import (
 	"github.com/gorilla/websocket"
 	"sync"
 	"time"
+
+	"bytes"
+	"io"
+	"math/rand"
+	"os"
+
+	"bufio"
+
+	"io/ioutil"
+	"log"
+	//"runtime"
+
+	"crypto/sha256"
+
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
 )
 
 const B_CONNECT = "B_CONNECT"
@@ -59,6 +77,143 @@ type BMessage struct {
 	OnlineData string
 	RoomData   string
 }
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func LineCounter(r io.Reader, numBytes int) (int, error) {
+	buf := make([]byte, numBytes*1024)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := r.Read(buf)
+		count += bytes.Count(buf[:c], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+		case err != nil:
+			return count, err
+		}
+	}
+}
+
+func ReadStream(f string) {
+	file, err := os.Open(f)
+	//fmt.Println(LineCounter(file, 2))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if strings.Contains("deanandkayla", scanner.Text()) {
+			fmt.Println("FOUND")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ReadMem(f string) {
+	var wg sync.WaitGroup
+	b, e := ioutil.ReadFile(f)
+	if e != nil {
+		panic(e)
+	}
+	array := bytes.Split(b, []byte("\n"))
+	//fmt.Println(b)
+
+	N := 32
+	perGo := len(array) / N
+	//leftOver := len(array) % runtime.NumCPU()
+	//rem := len(array) % perGo
+
+	for j := 0; j < N; j++ {
+
+		var goChunk [][]byte
+		//fmt.Println(j, j * (len(array) / runtime.NumCPU()), perGo)
+		if j+1 == N {
+			goChunk = array[j * (len(array) / N):]
+		} else {
+			goChunk = array[j * (len(array) / N): perGo]
+		}
+		wg.Add(1)
+		go func() {
+			for j := 0; j < len(goChunk); j++ {
+				//if bytes.Contains(goChunk[j], []byte("asdf")) {
+				encrpt := sha256.Sum256(goChunk[j])
+				_=encrpt
+			}
+			wg.Done()
+			//fmt.Println()
+		}()
+		perGo = perGo + len(array) / N
+	}
+	fmt.Println("waiting on grps")
+	wg.Wait()
+}
+
+func ChunkFIle() {
+	         fileToBeChunked := "../biggerread.txt"
+
+         file, err := os.Open(fileToBeChunked)
+
+         if err != nil {
+                 fmt.Println(err)
+                 os.Exit(1)
+         }
+
+         defer file.Close()
+
+         fileInfo, _ := file.Stat()
+
+         var fileSize int64 = fileInfo.Size()
+
+         const fileChunk = 1000 * (1 << 20) // 1 MB, change this to your requirement
+
+         // calculate total number of parts the file will be chunked into
+
+         totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
+
+         fmt.Printf("Splitting to %d pieces.\n", totalPartsNum)
+
+         for i := uint64(0); i < totalPartsNum; i++ {
+
+                 partSize := int(math.Min(fileChunk, float64(fileSize-int64(i*fileChunk))))
+                 partBuffer := make([]byte, partSize)
+
+                 file.Read(partBuffer)
+
+                 // write to disk
+                 fileName := "somebigfile_" + strconv.FormatUint(i, 10)
+                 _, err := os.Create(fileName)
+
+                 if err != nil {
+                         fmt.Println(err)
+                         os.Exit(1)
+                 }
+
+                 // write/save buffer to disk
+                 ioutil.WriteFile(fileName, partBuffer, os.ModeAppend)
+
+                 fmt.Println("Split to : ", fileName)
+         }
+}
+
+//func main() {
+//	readStream("smallread2.txt")
+//}
 
 //func GenCreds() (credentials.TransportCredentials){
 //	crt, key := CreatePemKey()
