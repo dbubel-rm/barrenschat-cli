@@ -21,7 +21,7 @@ var (
 	validFrom  = ""
 	validFor   = 365 * 24 * time.Hour
 	isCA       = true
-	rsaBits    = 2048
+	rsaBits    = 1024 * 2
 	ecdsaCurve = ""
 )
 

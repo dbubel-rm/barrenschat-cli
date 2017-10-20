@@ -1,0 +1,29 @@
+{
+	"ImportPath": "github.com/engineerbeard/barrenschat",
+	"GoVersion": "go1.9",
+	"GodepVersion": "v79",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Comment": "v1.2.0-9-g4201258",
+			"Rev": "4201258b820c74ac8e6922fc9e6b52f71fe46f8d"
+		},
+		{
+			"ImportPath": "github.com/jroimartin/gocui",
+			"Comment": "v0.3.0-68-g4f518ed",
+			"Rev": "4f518eddb04b8f73870836b6d1941e8aa3c06637"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-runewidth",
+			"Comment": "v0.0.2-3-g97311d9",
+			"Rev": "97311d9f7767e3d6f422ea06661bc2c7a19e8a5d"
+		},
+		{
+			"ImportPath": "github.com/nsf/termbox-go",
+			"Rev": "d51f2f6d6ccb97dd83ed04ae2f79c34234851f39"
+		}
+	]
+}

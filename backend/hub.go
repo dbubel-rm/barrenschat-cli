@@ -17,7 +17,7 @@ import (
 
 const CERT_PEM = "cert.pem"
 const KEY_PEM = "key.pem"
-const HUB_ADDR = "localhost:8081"
+
 
 var serverObj ServerStruct
 
@@ -29,6 +29,7 @@ func init() {
 }
 
 func main() {
+	HUB_ADDR := ":" + os.Getenv("PORT")
 	var upgrader = websocket.Upgrader{EnableCompression: true}
 	f, err := os.OpenFile("hub_log.txt", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
@@ -48,8 +49,6 @@ func main() {
 	mux.HandleFunc("/", WsStart(upgrader))
 	//http.ListenAndServe(":8000", mux)
 
-	//router := httprouter.New()
-	//router.GET("/bchatws", WsStart(upgrader))
 	log.Println("Server started on:", HUB_ADDR)
 	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
 	//log.Println(http.ListenAndServe(HUB_ADDR, mux))
