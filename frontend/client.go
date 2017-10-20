@@ -41,7 +41,7 @@ func RandStringRunes(n int) string {
 }
 func main() {
 	// Setup Ws connection
-	u := url.URL{Scheme: "wss", Host: "localhost:8081", Path: "/bchatws"}
+	u := url.URL{Scheme: "wss", Host: "https://damp-springs-83733.herokuapp.com:5000", Path: "/bchatws"}
 	d := websocket.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	c, _, err := d.Dial(u.String(), nil)
 	if err != nil {

@@ -50,8 +50,8 @@ func main() {
 	//http.ListenAndServe(":8000", mux)
 
 	log.Println("Server started on:", HUB_ADDR)
-	log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
-	//log.Println(http.ListenAndServe(HUB_ADDR, mux))
+	//log.Println(http.ListenAndServeTLS(HUB_ADDR, CERT_PEM, KEY_PEM, mux))
+	log.Println(http.ListenAndServe(HUB_ADDR, mux))
 }
 
 type ServerStruct struct {
