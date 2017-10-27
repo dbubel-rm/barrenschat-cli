@@ -144,71 +144,71 @@ func ReadMem(f string) {
 		var goChunk [][]byte
 		//fmt.Println(j, j * (len(array) / runtime.NumCPU()), perGo)
 		if j+1 == N {
-			goChunk = array[j * (len(array) / N):]
+			goChunk = array[j*(len(array)/N):]
 		} else {
-			goChunk = array[j * (len(array) / N): perGo]
+			goChunk = array[j*(len(array)/N) : perGo]
 		}
 		wg.Add(1)
 		go func() {
 			for j := 0; j < len(goChunk); j++ {
 				//if bytes.Contains(goChunk[j], []byte("asdf")) {
 				encrpt := sha256.Sum256(goChunk[j])
-				_=encrpt
+				_ = encrpt
 			}
 			wg.Done()
 			//fmt.Println()
 		}()
-		perGo = perGo + len(array) / N
+		perGo = perGo + len(array)/N
 	}
 	fmt.Println("waiting on grps")
 	wg.Wait()
 }
 
 func ChunkFIle() {
-	         fileToBeChunked := "../biggerread.txt"
+	fileToBeChunked := "../biggerread.txt"
 
-         file, err := os.Open(fileToBeChunked)
+	file, err := os.Open(fileToBeChunked)
 
-         if err != nil {
-                 fmt.Println(err)
-                 os.Exit(1)
-         }
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-         defer file.Close()
+	defer file.Close()
 
-         fileInfo, _ := file.Stat()
+	fileInfo, _ := file.Stat()
 
-         var fileSize int64 = fileInfo.Size()
+	var fileSize int64 = fileInfo.Size()
 
-         const fileChunk = 1000 * (1 << 20) // 1 MB, change this to your requirement
+	const fileChunk = 1000 * (1 << 20) // 1 MB, change this to your requirement
 
-         // calculate total number of parts the file will be chunked into
+	// calculate total number of parts the file will be chunked into
 
-         totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
+	totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
 
-         fmt.Printf("Splitting to %d pieces.\n", totalPartsNum)
+	fmt.Printf("Splitting to %d pieces.\n", totalPartsNum)
 
-         for i := uint64(0); i < totalPartsNum; i++ {
+	for i := uint64(0); i < totalPartsNum; i++ {
 
-                 partSize := int(math.Min(fileChunk, float64(fileSize-int64(i*fileChunk))))
-                 partBuffer := make([]byte, partSize)
+		partSize := int(math.Min(fileChunk, float64(fileSize-int64(i*fileChunk))))
+		partBuffer := make([]byte, partSize)
 
-                 file.Read(partBuffer)
+		file.Read(partBuffer)
 
-                 // write to disk
-                 fileName := "somebigfile_" + strconv.FormatUint(i, 10)
-                 _, err := os.Create(fileName)
+		// write to disk
+		fileName := "somebigfile_" + strconv.FormatUint(i, 10)
+		_, err := os.Create(fileName)
 
-                 if err != nil {
-                         fmt.Println(err)
-                         os.Exit(1)
-                 }
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
-                 // write/save buffer to disk
-                 ioutil.WriteFile(fileName, partBuffer, os.ModeAppend)
+		// write/save buffer to disk
+		ioutil.WriteFile(fileName, partBuffer, os.ModeAppend)
 
-                 fmt.Println("Split to : ", fileName)
-         }
+		fmt.Println("Split to : ", fileName)
+	}
 }
 
 //func main() {

@@ -18,7 +18,6 @@ import (
 const CERT_PEM = "cert.pem"
 const KEY_PEM = "key.pem"
 
-
 var serverObj ServerStruct
 
 func init() {
