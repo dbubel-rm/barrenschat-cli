@@ -29,6 +29,44 @@ func RandStringRunes(n int) string {
 	}
 	return string(b)
 }
+func getClient(room string) (bs.BChatClient, error) {
+	var bMessage bs.BMessage
+	var upgrader = websocket.Upgrader{EnableCompression: true}
+	var BClient bs.BChatClient
+	srv := httptest.NewServer((WsStart(upgrader)))
+	u, _ := url.Parse(srv.URL)
+	u.Scheme = "ws"
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		return BClient, err
+	}
+	conn.EnableWriteCompression(true)
+	BClient = bs.BChatClient{WsConn: conn, Uid: RandStringRunes(32), Name: RandStringRunes(10), Room: room}
+	if err != nil {
+		return BClient, err
+	}
+
+	BClient.SendMessage(bs.BMessage{MsgType: bs.B_CONNECT, Uid: RandStringRunes(32), Payload: BClient.Name})
+	bMessage, err = BClient.ReadMessage()
+
+	if !strings.Contains(bMessage.Payload, "Welcome") {
+		return BClient, err
+	}
+	bMessage, err = BClient.ReadMessage()
+	if !strings.Contains(bMessage.Payload, "Connection!") {
+		return BClient, err
+	}
+	return BClient, nil
+}
+
+func getRequestWithGET(t testing.TB, url string) *http.Request {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return req
+}
+
 func init() {
 	log.SetOutput(ioutil.Discard)
 	serverObj.Clients = make(map[string][]bs.BChatClient)
@@ -229,41 +267,3 @@ func TestBroadcastMessageNameChange(t *testing.T) {
 //func BenchmarkMessages(b *testing.B) {
 //	message(10, b)
 //}
-
-func getClient(room string) (bs.BChatClient, error) {
-	var bMessage bs.BMessage
-	var upgrader = websocket.Upgrader{EnableCompression: true}
-	var BClient bs.BChatClient
-	srv := httptest.NewServer((WsStart(upgrader)))
-	u, _ := url.Parse(srv.URL)
-	u.Scheme = "ws"
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		return BClient, err
-	}
-	conn.EnableWriteCompression(true)
-	BClient = bs.BChatClient{WsConn: conn, Uid: RandStringRunes(32), Name: RandStringRunes(10), Room: room}
-	if err != nil {
-		return BClient, err
-	}
-
-	BClient.SendMessage(bs.BMessage{MsgType: bs.B_CONNECT, Uid: RandStringRunes(32), Payload: BClient.Name})
-	bMessage, err = BClient.ReadMessage()
-
-	if !strings.Contains(bMessage.Payload, "Welcome") {
-		return BClient, err
-	}
-	bMessage, err = BClient.ReadMessage()
-	if !strings.Contains(bMessage.Payload, "Connection!") {
-		return BClient, err
-	}
-	return BClient, nil
-}
-
-func getRequestWithGET(t testing.TB, url string) *http.Request {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return req
-}

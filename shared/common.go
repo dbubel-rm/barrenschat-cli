@@ -31,6 +31,19 @@ const B_ROOMCHANGE = "B_ROOMCHANGE"
 const B_DISCONNECT = "B_DISCONNECT"
 const MAIN_ROOM = "MAIN_ROOM"
 
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+
+type BMessage struct {
+	MsgType    string
+	Name       string
+	Room       string
+	Payload    string
+	TimeStamp  time.Time
+	Uid        string
+	OnlineData string
+	RoomData   string
+}
+
 type BChatClient struct {
 	Name   string
 	Room   string
@@ -40,6 +53,8 @@ type BChatClient struct {
 }
 
 func (c *BChatClient) ChangeName(s string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.Name = s
 }
 
@@ -67,18 +82,7 @@ func (c *BChatClient) ReadMessage() (BMessage, error) {
 	return bMessage, err
 }
 
-type BMessage struct {
-	MsgType    string
-	Name       string
-	Room       string
-	Payload    string
-	TimeStamp  time.Time
-	Uid        string
-	OnlineData string
-	RoomData   string
-}
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+// All test / play functions below
 
 func RandStringRunes(n int) string {
 	b := make([]rune, n)

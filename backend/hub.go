@@ -135,6 +135,7 @@ func (s *ServerStruct) AddRoom(r string) {
 	s.Clients[b.MAIN_ROOM] = []b.BChatClient{}
 	s.mu.Unlock()
 }
+
 func (s *ServerStruct) BroadcastMessage(r string, m b.BMessage) {
 	s.mu.Lock()
 	for i := range s.Clients[r] {
@@ -161,6 +162,7 @@ func handleNewClient(c *websocket.Conn) {
 	defer c.Close()
 	var clientId string
 
+	// Setup new client
 	BClient := b.BChatClient{WsConn: c}
 	bMessage, _ := BClient.ReadMessage()
 	BClient.Name = bMessage.Payload
@@ -168,6 +170,8 @@ func handleNewClient(c *websocket.Conn) {
 	BClient.Uid = bMessage.Uid
 
 	serverObj.AddClient(&BClient)
+
+	// Send message back to client that connected
 	BClient.SendMessage(b.BMessage{
 		MsgType:    b.B_CONNECT,
 		Name:       bMessage.Payload,
@@ -178,6 +182,7 @@ func handleNewClient(c *websocket.Conn) {
 		RoomData:   serverObj.GetRoomsString(),
 	})
 
+	// Tell the other clients about the new person that connected
 	clientId = bMessage.Uid
 	serverObj.BroadcastMessage(b.MAIN_ROOM, b.BMessage{
 		MsgType:    b.B_CONNECT,
@@ -189,12 +194,15 @@ func handleNewClient(c *websocket.Conn) {
 		RoomData:   serverObj.GetRoomsString(),
 	})
 
+	// Main recieve loop for client messages
 	for {
 		bMessage, err := BClient.ReadMessage()
 		if err == nil { // Process message
 
 			room, idx, _ := serverObj.FindClient(clientId)
 			bMessage.OnlineData = serverObj.GetNamesInRoom(room)
+
+			// Process each message type
 			if bMessage.MsgType == b.B_MESSAGE {
 				serverObj.BroadcastMessage(room, bMessage)
 			} else if bMessage.MsgType == b.B_NAMECHANGE {

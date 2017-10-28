@@ -108,7 +108,7 @@ func Generate(certPath string, keyPath string, host string) error {
 
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"Acme Co"},
+			Organization: []string{"Barrens Co."},
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
