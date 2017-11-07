@@ -213,32 +213,32 @@ func TestBroadcastMessageNameChange(t *testing.T) {
 	//serverObj = make(map[string][]BChatClient)
 }
 
-//func TestConnect10Clients(t *testing.T) {
-//	clientList := []bs.BChatClient{}
-//	for n := 0; n < 10; n++ {
-//		f, err := getClient(bs.MAIN_ROOM)
-//		if err != nil {
-//			t.Fatalf(err.Error())
-//		}
-//		clientList = append(clientList, f)
-//		go func() {
-//			for {
-//				f.ReadMessage()
-//			}
-//		}()
-//		//uu := RandStringRunes(32)
-//		//r := RandStringRunes(32)
-//		////c, err := getClient()
-//		//if err != nil {
-//		//	t.Fatalf(err.Error())
-//		//}
-//		//f.SendMessage(bs.BMessage{MsgType:bs.B_MESSAGE, Uid:uu, Payload:r})
-//		//c.ReadMessage()
-//	}
-//	for _, clients := range clientList {
-//		clients.Close()
-//	}
-//}
+func TestConnect10Clients(t *testing.T) {
+	clientList := []bs.BChatClient{}
+	for n := 0; n < 10; n++ {
+		f, err := getClient(bs.MAIN_ROOM)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+		clientList = append(clientList, f)
+		go func() {
+			for {
+				f.ReadMessage()
+			}
+		}()
+		//uu := RandStringRunes(32)
+		//r := RandStringRunes(32)
+		////c, err := getClient()
+		//if err != nil {
+		//	t.Fatalf(err.Error())
+		//}
+		//f.SendMessage(bs.BMessage{MsgType:bs.B_MESSAGE, Uid:uu, Payload:r})
+		//c.ReadMessage()
+	}
+	for _, clients := range clientList {
+		clients.Close()
+	}
+}
 
 //func message(i int, b *testing.B) {
 //	var bMessage bs.BMessage

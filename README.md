@@ -7,4 +7,6 @@ Chat application written in GoLang using websockets and TLS
 ## running tests and benchmarks
 go test -v -race ./... -bench=.
 
+godep save ./...
+
 
