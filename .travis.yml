@@ -1,5 +1,9 @@
 language: go
 sudo: false
+matrix:
+  include:
+  - go: 1.x
+    env: LATEST=true
 script:
 - go get -t -v ./...
 - if [ "${LATEST}" = "true" ]; then GOOS=darwin go build -o darwin main.go; fi
