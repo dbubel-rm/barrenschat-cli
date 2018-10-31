@@ -1,27 +1,12 @@
 language: go
 sudo: false
-matrix:
-  include:
-  - go: 1.x
-    env: LATEST=true
-before_install:
-- go get github.com/mitchellh/gox
-install:
-- 
 script:
 - go get -t -v ./...
-- 
-- go test -v -race ./... -bench=.
-- if [ "${LATEST}" = "true" ]; then gox -os="windows linux darwin" -arch="amd64" -verbose
-  ./...; fi
+- if [ "${LATEST}" = "true" ]; then GOOS=darwin go build -o darwin main.go; fi
 deploy:
   provider: releases
   api_key:
-    secure: fQxUOsW7veYOzyAcxJmVrUjMDsdn/eXzw9KoEUXnkZ4auJLvfhbBhqnJV0NKI9/7sM/KylLVHgoLPuHv5Ne6KQ5XQBuLWIKAm7NkaLfNNFi1JOjYoM3jMCEDoqawaNAhtU5EkCUQEKLhcATC9GMMhR2vPn1Ak4aLOXSUXQuVHajt4oCvUK84OduM9FmHvS/mAwL9g0U/HkvTzHYxQMkiUkREc8kUrkbABh0WtrMWwPguYIfQjG79XdeFnAFsWYakodfZK76ao59O/GHh0BYrLpcazAaK5JU2FpvTS5RiwOOUbR7zn8HYUk+hn1ol5ZFZyGz5n82VmbT9gK43fH1s5dZg+KiJCa5ITtW8YNcAfc2Gb1lciooV7xzMMFBj3NIhG6XISrVQ507Qh2Qdkg5hVGxU/7vSewtadGxOC7Z2ILKLQq5ckFicDsh+ZEIJObdOCFWy0VCox4Ei+fT+SFS8EpDn1u4bv8jfpq/9MAu/HDeHUeA1v0xHT5K5ZCqtsMWskROrJMfY34l50nzytb2ZxRZ4B8Oe1/x3/cB8zsq5jSkV7ND2ca4a3iPnwFica4/EShuhswSbodZk5TbI5MTuDGcRvonFwzPZ+Bcxrq+rYs2Q1idaPE6AmYOgkiFkz2JuecGUKaAc/7dhxBjx7O4M2ODzS7X13RdJYkTtUEgdBv0=
-  file: 
-  - frontend_windows_amd64.exe
-  - frontend_linux_amd64
-  - frontend_darwin_amd64
+    secure: nMN17g5LMEYYIA83/KMcg7uPg30vQDjqMl6tKgoWQPCShlMws63lpeqGpkeYICjU2QI9GvioCEiE62WEnOPNkkWH491FtWbLKnI2/YpaOfzMgQD9483yFHNVbYSik44wPcAboiADDCCJUiuOACvdB3mackMOhWcwk6K0n7goZZ/zwX2dRlhROf1VARBV/MrKhBvgY3RdlkIpddJUOJUoRLzLwL2oC3sKSUTpH3HEvv7O0LE+eHJKkkNyC8vDpLg6s87AnZVXmuNAAWWJ7x9rXj37TH1Qq0ZX7SZ0KO1CuKcl01QniBB9tW/0nEkYDx0fNkRfyd/7Ty1pgzjlHemnfyNNSFCn1v0G7I0OnvOgGkOLuEGKnQOYOZAQGt3ZLwYl5OEzauhTmGF8DScPDF9ujrUxvMFyVYrm7cZMGfs8DkMmD7jCvAdZeRNG2bG1OP0APEtIX4kDSdKVVkpz8woIcuHz7Bg2+vuegQJFR8thRpRpPaYOeoU3k8vKe6VBLVn/rRjYSBaz5n94pELga4AHETuK9wsorxTcKYPd9Ly3RZyvmZ8LeKaWIVBDHEtBzs7y8aPtuBSlDjMvqPfQi/A7tGyZQm7O1lA38V/uKQCYS8biwEMUeCpow15iLY1WzvtbPQdXgfT8D/kSK4dMiRmcPwnNQ4AGa7dToHu0dlPEEr0=
+  file: darwin
   on:
-    branch: master
-    
+    repo: engineerbeard/barrenschat-cli

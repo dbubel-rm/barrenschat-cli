@@ -1,5 +1,32 @@
 package main
 
+// language: go
+// sudo: false
+// matrix:
+//   include:
+//   - go: 1.x
+//     env: LATEST=true
+// before_install:
+// - go get github.com/mitchellh/gox
+// install:
+// -
+// script:
+// - go get -t -v ./...
+// -
+// - go test -v -race ./... -bench=.
+// - if [ "${LATEST}" = "true" ]; then gox -os="windows linux darwin" -arch="amd64" -verbose
+//   ./...; fi
+// deploy:
+//   provider: releases
+//   api_key:
+//     secure: fQxUOsW7veYOzyAcxJmVrUjMDsdn/eXzw9KoEUXnkZ4auJLvfhbBhqnJV0NKI9/7sM/KylLVHgoLPuHv5Ne6KQ5XQBuLWIKAm7NkaLfNNFi1JOjYoM3jMCEDoqawaNAhtU5EkCUQEKLhcATC9GMMhR2vPn1Ak4aLOXSUXQuVHajt4oCvUK84OduM9FmHvS/mAwL9g0U/HkvTzHYxQMkiUkREc8kUrkbABh0WtrMWwPguYIfQjG79XdeFnAFsWYakodfZK76ao59O/GHh0BYrLpcazAaK5JU2FpvTS5RiwOOUbR7zn8HYUk+hn1ol5ZFZyGz5n82VmbT9gK43fH1s5dZg+KiJCa5ITtW8YNcAfc2Gb1lciooV7xzMMFBj3NIhG6XISrVQ507Qh2Qdkg5hVGxU/7vSewtadGxOC7Z2ILKLQq5ckFicDsh+ZEIJObdOCFWy0VCox4Ei+fT+SFS8EpDn1u4bv8jfpq/9MAu/HDeHUeA1v0xHT5K5ZCqtsMWskROrJMfY34l50nzytb2ZxRZ4B8Oe1/x3/cB8zsq5jSkV7ND2ca4a3iPnwFica4/EShuhswSbodZk5TbI5MTuDGcRvonFwzPZ+Bcxrq+rYs2Q1idaPE6AmYOgkiFkz2JuecGUKaAc/7dhxBjx7O4M2ODzS7X13RdJYkTtUEgdBv0=
+//   file:
+//   - frontend_windows_amd64.exe
+//   - frontend_linux_amd64
+//   - frontend_darwin_amd64
+//   on:
+//     branch: master
+
 import (
 	"fmt"
 	"log"
