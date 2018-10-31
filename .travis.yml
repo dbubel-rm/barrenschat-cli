@@ -9,9 +9,11 @@ script:
 - if [ "${LATEST}" = "true" ]; then GOOS=darwin go build -o darwin main.go; fi
 deploy:
   provider: releases
+  skip_cleanup: true
   api_key:
     secure: nMN17g5LMEYYIA83/KMcg7uPg30vQDjqMl6tKgoWQPCShlMws63lpeqGpkeYICjU2QI9GvioCEiE62WEnOPNkkWH491FtWbLKnI2/YpaOfzMgQD9483yFHNVbYSik44wPcAboiADDCCJUiuOACvdB3mackMOhWcwk6K0n7goZZ/zwX2dRlhROf1VARBV/MrKhBvgY3RdlkIpddJUOJUoRLzLwL2oC3sKSUTpH3HEvv7O0LE+eHJKkkNyC8vDpLg6s87AnZVXmuNAAWWJ7x9rXj37TH1Qq0ZX7SZ0KO1CuKcl01QniBB9tW/0nEkYDx0fNkRfyd/7Ty1pgzjlHemnfyNNSFCn1v0G7I0OnvOgGkOLuEGKnQOYOZAQGt3ZLwYl5OEzauhTmGF8DScPDF9ujrUxvMFyVYrm7cZMGfs8DkMmD7jCvAdZeRNG2bG1OP0APEtIX4kDSdKVVkpz8woIcuHz7Bg2+vuegQJFR8thRpRpPaYOeoU3k8vKe6VBLVn/rRjYSBaz5n94pELga4AHETuK9wsorxTcKYPd9Ly3RZyvmZ8LeKaWIVBDHEtBzs7y8aPtuBSlDjMvqPfQi/A7tGyZQm7O1lA38V/uKQCYS8biwEMUeCpow15iLY1WzvtbPQdXgfT8D/kSK4dMiRmcPwnNQ4AGa7dToHu0dlPEEr0=
-  file: darwin
+  file:
+    - darwin
   on:
     tags: true
     repo: engineerbeard/barrenschat-cli
