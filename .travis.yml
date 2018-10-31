@@ -26,6 +26,6 @@ deploy:
     - frontend_linux_amd64
     - frontend_darwin_amd64
   on:
-    repo: engineerbeard/barrenschat
+    repo: engineerbeard/barrenschat-cli
     condition: $LATEST = true
     tags: true
