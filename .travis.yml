@@ -4,28 +4,23 @@ matrix:
   include:
   - go: 1.x
     env: LATEST=true
-  # - go: tip
-  # allow_failures:
-  # # - go: tip
 before_install:
 - go get github.com/mitchellh/gox
 install:
 - 
 script:
-  - go get -t -v ./...
-  - #go vet $(go list ./... | grep -v /vendor/)
-  - go test -v -race ./... -bench=.
-  - if [ "${LATEST}" = "true" ]; then gox -os="windows linux darwin" -arch="amd64" -verbose ./...; fi
+- go get -t -v ./...
+- 
+- go test -v -race ./... -bench=.
+- if [ "${LATEST}" = "true" ]; then gox -os="windows linux darwin" -arch="amd64" -verbose
+  ./...; fi
 deploy:
   provider: releases
-  skip_cleanup: true
   api_key:
-    secure: aAt81Im9wh5NgmBRIWXcitrBVOhvOtjreQMfdhgaJuQCkmExwYG3V2zELH11F/xkzju6bay/hpvdvnoE3GAYMDf1af3t7UCpxbu+ZgvgciCsUcTLNCVdssAI0hEj0t6ksSblhB09X4U9RkVZA+o5q0/gLs68Q0xKKR8a9muv025MkXfmktJU/fo86Gl2c1zEKpTo6rjotCzllAZCTNi26Ph4ZZCPVwwZEA/T8HpxBjGnfWnQ1qtr0hWEcQvE4Skxhf5VWhtxzPQL2hYGZ2VpSnWYaTz2SfWVYshZ7u8KuDEP68FlkgYIY40+R4aWjaUn2DhjGCCYxDBQ9dmkcC7ZIp4QSEl2/XGlRxs7BTyRqZBjs06CNnGMMpzBwidxHlyyxEIDADKgDDkdIX2bi3o1CvZG5h7/j60vcodPfI600w5imeS7YkSsE0/c9VCLUZApmR527JHMXt6ZWqa7Fp+FBYLR6fWFIffcqQ5T2STOWwSrthZ5ClG/cw4q6YEHNJJy0aUKJu5Jlx26pe0Fd9RG1M7pK9Z6advRcGSO71G5+egaeW36FqZEmxNg0pWpDAzyx9Io8XE0vyQv1TXyKtX1CP/b+sNojAAVRWYkleLtHYPR5HHwmH30onmgXeaVN7Uc9+L6XZSKxZjGUe6KtViI5L7+iX9jZgcJyh4xacMY88U=
-  file:
-    - frontend_windows_amd64.exe
-    - frontend_linux_amd64
-    - frontend_darwin_amd64
+    secure: fQxUOsW7veYOzyAcxJmVrUjMDsdn/eXzw9KoEUXnkZ4auJLvfhbBhqnJV0NKI9/7sM/KylLVHgoLPuHv5Ne6KQ5XQBuLWIKAm7NkaLfNNFi1JOjYoM3jMCEDoqawaNAhtU5EkCUQEKLhcATC9GMMhR2vPn1Ak4aLOXSUXQuVHajt4oCvUK84OduM9FmHvS/mAwL9g0U/HkvTzHYxQMkiUkREc8kUrkbABh0WtrMWwPguYIfQjG79XdeFnAFsWYakodfZK76ao59O/GHh0BYrLpcazAaK5JU2FpvTS5RiwOOUbR7zn8HYUk+hn1ol5ZFZyGz5n82VmbT9gK43fH1s5dZg+KiJCa5ITtW8YNcAfc2Gb1lciooV7xzMMFBj3NIhG6XISrVQ507Qh2Qdkg5hVGxU/7vSewtadGxOC7Z2ILKLQq5ckFicDsh+ZEIJObdOCFWy0VCox4Ei+fT+SFS8EpDn1u4bv8jfpq/9MAu/HDeHUeA1v0xHT5K5ZCqtsMWskROrJMfY34l50nzytb2ZxRZ4B8Oe1/x3/cB8zsq5jSkV7ND2ca4a3iPnwFica4/EShuhswSbodZk5TbI5MTuDGcRvonFwzPZ+Bcxrq+rYs2Q1idaPE6AmYOgkiFkz2JuecGUKaAc/7dhxBjx7O4M2ODzS7X13RdJYkTtUEgdBv0=
+  file: 
+  - frontend_windows_amd64.exe
+  - frontend_linux_amd64
+  - frontend_darwin_amd64
   on:
     repo: engineerbeard/barrenschat-cli
-    condition: $LATEST = true
-    tags: true
