@@ -4,9 +4,9 @@ matrix:
   include:
   - go: 1.x
     env: LATEST=true
-  - go: tip
-  allow_failures:
-  - go: tip
+  # - go: tip
+  # allow_failures:
+  # # - go: tip
 before_install:
 - go get github.com/mitchellh/gox
 install:
