@@ -23,4 +23,5 @@ deploy:
   - frontend_linux_amd64
   - frontend_darwin_amd64
   on:
-    repo: engineerbeard/barrenschat-cli
+    branch: master
+    
