@@ -43,7 +43,7 @@ import (
 
 const CHATWINDOW = "CHATWINDOW"
 const ONLINEWINDOW = "ONLINEWINDOW"
-const ROOMWINDOW = "ROOMWINDOW"
+const ROOMWINDOW = "ROOMWINDOWs"
 
 // type server struct{}
 
